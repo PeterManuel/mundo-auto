@@ -1,18 +1,19 @@
-"""add_activity_logs_table_new
+"""create_activity_logs_table
 
-Revision ID: de6eb00baabf
-Revises: fe3244c480e0
-Create Date: 2025-10-16 15:43:24.357042
+Revision ID: 1fd76376aab2
+Revises: de6eb00baabf
+Create Date: 2025-10-20 10:09:30.825830
 
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects import postgresql
+import uuid
 
 
 # revision identifiers, used by Alembic.
-revision = 'de6eb00baabf'
-down_revision = 'fe3244c480e0'
+revision = '1fd76376aab2'
+down_revision = 'de6eb00baabf'
 branch_labels = None
 depends_on = None
 
@@ -21,8 +22,8 @@ def upgrade() -> None:
     # Create activity_logs table
     op.create_table(
         'activity_logs',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True),
-        sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id'), nullable=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('users.id'), nullable=True),
         sa.Column('endpoint', sa.String(), nullable=False),
         sa.Column('method', sa.String(), nullable=False),
         sa.Column('path', sa.String(), nullable=False),
@@ -34,11 +35,12 @@ def upgrade() -> None:
         sa.Column('device_type', sa.String(), nullable=True),
         sa.Column('browser', sa.String(), nullable=True),
         sa.Column('os', sa.String(), nullable=True),
-        sa.Column('extra_data', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('extra_data', postgresql.JSON(astext_type=sa.Text()), nullable=True),
+        sa.Column('created_at', sa.DateTime(), default=sa.func.now()),
         sa.Column('processing_time_ms', sa.String(), nullable=True),
     )
 
 
 def downgrade() -> None:
+    # Drop the activity_logs table
     op.drop_table('activity_logs')
