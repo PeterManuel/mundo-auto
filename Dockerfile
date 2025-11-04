@@ -38,4 +38,4 @@ RUN mkdir -p uploads/avatars uploads/products static/images/products
 EXPOSE 8000
 
 # Command to run migrations and start the application
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["poetry", "run","uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
