@@ -6,8 +6,7 @@ WORKDIR /app
 ENV PYTHONPATH=/app \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000 \
-    POSTGRES_PORT=5432
+    PORT=8000
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -35,8 +34,16 @@ RUN mkdir -p uploads/avatars uploads/products static/images/products
 
 # Create start script
 RUN echo '#!/bin/sh\n\
-export POSTGRES_PORT=${POSTGRES_PORT:-5432}\n\
+\n\
+# Handle DATABASE_URL if provided, otherwise construct from components\n\
+if [ -z "$DATABASE_URL" ]; then\n\
+    export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}"\n\
+fi\n\
+\n\
+# Run migrations\n\
 poetry run alembic upgrade head\n\
+\n\
+# Start the application\n\
 poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
