@@ -2,31 +2,47 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Instalar dependências do sistema
+# Set environment variables
+ENV PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8000 \
+    POSTGRES_PORT=5432
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-# Copy the current directory contents into the container at /app
-COPY . /app
-
 # Install Poetry
 RUN pip install poetry
 
+# Copy poetry files
+COPY pyproject.toml poetry.lock ./
 
-# Instalar dependências
+# Configure poetry to not create a virtual environment
+RUN poetry config virtualenvs.create false
+
+# Install dependencies
 RUN poetry install --no-root
 
-# Copiar código da aplicação
+# Copy application code
 COPY . .
 
-# Expor porta
+# Create uploads directory
+RUN mkdir -p uploads/avatars uploads/products static/images/products
+
+# Create start script
+RUN echo '#!/bin/sh\n\
+export POSTGRES_PORT=${POSTGRES_PORT:-5432}\n\
+poetry run alembic upgrade head\n\
+poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Expose port
 EXPOSE 8000
 
-
-# Comando para executar a aplicação
-CMD ["poetry", "run","uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the start script
+CMD ["/app/start.sh"]
 

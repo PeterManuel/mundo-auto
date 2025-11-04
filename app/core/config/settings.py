@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "mundo_auto"
-    POSTGRES_PORT: str = "5432"
+    POSTGRES_PORT: int = 5432
+    
+    @property
+    def DATABASE_URI(self) -> str:
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
     # Social Login
     GOOGLE_CLIENT_ID: Optional[str] = None
