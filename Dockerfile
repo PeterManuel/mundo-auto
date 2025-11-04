@@ -1,55 +1,32 @@
-# Use Python 3.10 as base image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
-# Set environment variables
-ENV PYTHONPATH=/app \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000 \
-    POSTGRES_PORT=5432
-
-# Install system dependencies
+# Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    postgresql-client \
+    gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
 
 # Install Poetry
 RUN pip install poetry
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock ./
 
-# Configure poetry to not create a virtual environment
-RUN poetry config virtualenvs.create false
-
-# Install dependencies
+# Instalar dependências
 RUN poetry install --no-root
 
-# Copy the rest of the application
+# Copiar código da aplicação
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads/avatars uploads/products static/images/products
-
-# Create a script to run the application
-RUN echo '#!/bin/sh\n\
-if [ -z "$PORT" ]; then\n\
-    export PORT=8000\n\
-fi\n\
-if [ -z "$POSTGRES_PORT" ]; then\n\
-    export POSTGRES_PORT=5432\n\
-fi\n\
-poetry run alembic upgrade head\n\
-poetry run uvicorn app.main:app --host 0.0.0.0 --port $PORT\n\
-' > /app/start.sh && chmod +x /app/start.sh
-
-# Expose port
+# Expor porta
 EXPOSE 8000
 
-# Command to run the start script
-CMD ["/app/start.sh"]
+
+# Comando para executar a aplicação
+CMD ["poetry", "run","uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
