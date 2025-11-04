@@ -10,6 +10,7 @@ from app.core.security import get_password_hash
 from app.models.user import User
 from app.models.product import Category, Product, ProductImage
 from app.models.admin import SystemSetting
+from app.models.banner import Banner
 from app.db.session import SessionLocal
 
 
@@ -244,10 +245,17 @@ def init_db() -> None:
     ]
     db.add_all(settings)
     
+
+    # Create sample banners
+    banners = [
+        Banner(title="Summer Sale", image_url="/static/images/summer-sale.jpg", description="Big discounts for summer!"),
+        Banner(title="Winter Deals", image_url="/static/images/winter-deals.jpg", description="Hot deals for winter!")
+    ]
+    db.add_all(banners)
+
     # Commit all changes
     db.commit()
     db.close()
-    
     print("Database initialized successfully!")
 
 

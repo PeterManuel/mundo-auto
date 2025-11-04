@@ -11,7 +11,7 @@ class CategoryBase(BaseModel):
     description: Optional[str] = None
     # parent_id is now ignored in create operations, but kept for compatibility
     parent_id: Optional[uuid.UUID] = None
-    image: Optional[str] = None
+    image: Optional[str] = None  # base64-encoded image string
 
 
 class CategoryCreate(CategoryBase):
@@ -45,13 +45,15 @@ class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
     technical_details: Optional[str] = None
-    price: float = Field(..., gt=0)
-    sale_price: Optional[float] = None
-    sku: Optional[str] = None
+    price: float = Field(..., gt=0)  # Base/reference price
+    sale_price: Optional[float] = None  # Base/reference sale price
+    sku: Optional[str] = None  # Base/reference SKU
     oe_number: Optional[str] = None  # Original Equipment number
-    stock_quantity: int = 0
+    # stock_quantity moved to ShopProduct
     brand: Optional[str] = None
     manufacturer: Optional[str] = None
+    model: Optional[str] = None  # Vehicle model
+    manufacturer_year: Optional[int] = None  # Vehicle manufacturer year
     compatible_vehicles: Optional[List[str]] = None
     weight: Optional[float] = None
     dimensions: Optional[str] = None
@@ -72,7 +74,7 @@ class ProductUpdate(ProductBase):
 
 class ProductImageResponse(BaseModel):
     id: uuid.UUID
-    image_url: str
+    image_data: str  # base64 string
     alt_text: Optional[str] = None
     is_primary: bool
     
@@ -88,9 +90,38 @@ class ProductResponse(ProductBase):
     updated_at: datetime
     images: List[ProductImageResponse] = []
     categories: List[CategoryResponse] = []
+    model: Optional[str] = None
+    manufacturer_year: Optional[int] = None
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class ShopProductInfo(BaseModel):
+    shop_id: uuid.UUID
+    shop_name: str
+    stock_quantity: int
+    price: Optional[float] = None
+    sale_price: Optional[float] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ProductWithShopInfoResponse(ProductResponse):
+    """Product response with shop-specific information"""
+    shop_info: List[ShopProductInfo] = []
+    model: Optional[str] = None
+    manufacturer_year: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 
 # Product Review schemas

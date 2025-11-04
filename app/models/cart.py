@@ -14,17 +14,20 @@ class CartItem(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    shop_product_id = Column(UUID(as_uuid=True), ForeignKey("shop_products.id"), nullable=False)
     quantity = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     user = relationship("User", back_populates="cart_items")
-    product = relationship("Product", back_populates="cart_items")
-    
+    shop_product = relationship("ShopProduct")
+
     @property
     def total_price(self):
-        # Use sale_price if available, otherwise use regular price
-        price = self.product.sale_price if self.product.sale_price else self.product.price
+        # Use shop_product price if available
+        price = self.shop_product.sale_price if self.shop_product.sale_price else self.shop_product.price
+        if price is None:
+            # Fallback to product price
+            price = self.shop_product.product.sale_price if self.shop_product.product.sale_price else self.shop_product.product.price
         return price * self.quantity

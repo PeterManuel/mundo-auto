@@ -21,6 +21,10 @@ from app.crud.product import (
     create_product_review,
     get_product_reviews
 )
+from app.crud.shop_product import (
+    get_shop_products,
+    get_products_by_shops
+)
 from app.db.session import get_db
 from app.models.user import User
 from app.models.product import Category, Product
@@ -32,6 +36,7 @@ from app.schemas.product import (
     ProductCreate,
     ProductUpdate,
     ProductResponse,
+    ProductWithShopInfoResponse,
     ProductReviewCreate,
     ProductReviewResponse
 )
@@ -73,7 +78,20 @@ def read_category(
     if category is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
     
-    return category
+    # Convert to dict and ensure subcategories is a list
+    category_dict = {
+        "id": category.id,
+        "name": category.name,
+        "slug": category.slug,
+        "description": category.description,
+        "parent_id": category.parent_id,
+        "image": category.image,
+        "is_active": category.is_active,
+        "created_at": category.created_at,
+        "subcategories": []  # Initialize as empty list since we're using flat category structure
+    }
+    
+    return category_dict
 
 
 @router.post("/categories/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
@@ -84,6 +102,7 @@ def create_category_endpoint(
 ):
     """
     Create a new category (admin only)
+    Image must be a base64-encoded string.
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -140,6 +159,8 @@ def read_products(
     limit: int = 100,
     category_id: Optional[uuid.UUID] = None,
     brand: Optional[str] = None,
+    model: Optional[str] = None,
+    manufacturer_year: Optional[int] = None,
     oe_number: Optional[str] = None,
     search: Optional[str] = None,
     min_price: Optional[float] = None,
@@ -158,6 +179,8 @@ def read_products(
         limit=limit,
         category_id=category_id,
         brand=brand,
+        model=model,
+        manufacturer_year=manufacturer_year,
         oe_number=oe_number,
         search_query=search,
         min_price=min_price,
@@ -180,13 +203,14 @@ def read_brands(db: Session = Depends(get_db)):
     return [brand[0] for brand in brands if brand[0]]
 
 
-@router.get("/{product_id_or_slug}", response_model=ProductResponse)
+@router.get("/{product_id_or_slug}", response_model=ProductWithShopInfoResponse)
 def read_product(
     product_id_or_slug: str,
+    shop_id: Optional[uuid.UUID] = None,
     db: Session = Depends(get_db)
 ):
     """
-    Get a specific product by ID or slug
+    Get a specific product by ID or slug with shop inventory information
     """
     # Check if it's a UUID or a slug
     try:
@@ -198,6 +222,17 @@ def read_product(
     
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    
+    # Get shop information for this product
+    shop_info = get_products_by_shops(db, product.id)
+    
+    # Create response
+    response_dict = {
+        **product.__dict__,
+        "shop_info": shop_info
+    }
+    
+    return response_dict
     
     return product
 
@@ -257,33 +292,26 @@ def delete_product_endpoint(
 
 
 @router.post("/{product_id}/images", status_code=status.HTTP_201_CREATED)
-async def upload_product_image(
+def upload_product_image_base64(
     product_id: uuid.UUID,
-    is_primary: bool = Form(False),
-    alt_text: Optional[str] = Form(None),
-    file: UploadFile = File(...),
+    image_data: str,
+    is_primary: bool = False,
+    alt_text: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Upload product image (admin only)
+    Upload product image as base64 string (admin only)
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
-    
     # Check if product exists
     product = get_product(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    
-    # Save file
-    filename = await save_upload_file(file, "products")
-    file_url = f"/uploads/products/{filename}"
-    
     # Add image to product
-    image = add_product_image(db, product_id, file_url, alt_text, is_primary)
-    
-    return {"id": image.id, "image_url": image.image_url, "is_primary": image.is_primary}
+    image = add_product_image(db, product_id, image_data, alt_text, is_primary)
+    return {"id": image.id, "is_primary": image.is_primary}
 
 
 @router.delete("/{product_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)

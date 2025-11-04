@@ -1,12 +1,21 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 from typing import List, Optional
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, Text, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+
+
+class UserRole(str, PyEnum):
+    """User role enumeration"""
+    CUSTOMER = "customer"
+    LOGIST = "logist"
+    ADMIN = "admin"
+    SUPERADMIN = "superadmin"
 
 
 class User(Base):
@@ -22,6 +31,8 @@ class User(Base):
     profile_image = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    role = Column(Enum(UserRole), default=UserRole.CUSTOMER, nullable=False)
+    shop_id = Column(UUID(as_uuid=True), ForeignKey("shops.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -32,6 +43,7 @@ class User(Base):
     facebook_id = Column(String, nullable=True)
     
     # Relationships
+    shop = relationship("Shop", back_populates="users")
     orders = relationship("Order", back_populates="user")
     cart_items = relationship("CartItem", back_populates="user")
     wishlist_items = relationship("WishlistItem", back_populates="user")

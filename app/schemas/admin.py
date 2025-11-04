@@ -83,3 +83,5 @@ class DashboardSummary(BaseModel):
     active_users: int
     top_selling_products: List[Dict[str, Any]]
     recent_orders: List[Dict[str, Any]]
+    shop_id: Optional[uuid.UUID] = None
+    shop_name: Optional[str] = None

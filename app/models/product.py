@@ -25,7 +25,7 @@ class Category(Base):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
-    image = Column(String, nullable=True)
+    image = Column(Text, nullable=True)  # Store base64 image string
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -45,13 +45,15 @@ class Product(Base):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     technical_details = Column(Text, nullable=True)
-    price = Column(Float, nullable=False)
-    sale_price = Column(Float, nullable=True)
-    sku = Column(String, nullable=True, unique=True)
+    price = Column(Float, nullable=False)  # Base/reference price
+    sale_price = Column(Float, nullable=True)  # Base/reference sale price
+    sku = Column(String, nullable=True)  # Base/reference SKU (no longer unique as each shop may have its own)
     oe_number = Column(String, nullable=True, index=True)  # Original Equipment number
-    stock_quantity = Column(Integer, default=0)
+    # stock_quantity moved to ShopProduct
     brand = Column(String, nullable=True, index=True)
     manufacturer = Column(String, nullable=True)
+    model = Column(String, nullable=True, index=True)  # Vehicle model
+    manufacturer_year = Column(Integer, nullable=True)  # Vehicle manufacturer year
     compatible_vehicles = Column(ARRAY(String), nullable=True)  # Array of vehicle compatibility
     weight = Column(Float, nullable=True)  # Weight in kg
     dimensions = Column(String, nullable=True)  # Format: "LxWxH" in cm
@@ -64,7 +66,7 @@ class Product(Base):
     # Relationships
     categories = relationship("Category", secondary=product_category, back_populates="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
-    cart_items = relationship("CartItem", back_populates="product")
+    shop_products = relationship("ShopProduct", back_populates="product", cascade="all, delete-orphan")
     order_items = relationship("OrderItem", back_populates="product")
     reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
     wishlist_items = relationship("WishlistItem", back_populates="product")
@@ -75,7 +77,7 @@ class ProductImage(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
-    image_url = Column(String, nullable=False)
+    image_data = Column(Text, nullable=False)  # Store base64 image string
     alt_text = Column(String, nullable=True)
     is_primary = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

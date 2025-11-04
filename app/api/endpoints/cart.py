@@ -41,25 +41,25 @@ def add_item_to_cart(
     """
     Add item to cart
     """
-    cart_item = add_to_cart(db, current_user.id, item.product_id, item.quantity)
-    
-    # Get full product information to return in response
-    product = cart_item.product
-    
-    # Create response with product information
+    cart_item = add_to_cart(db, current_user.id, item.shop_product_id, item.quantity)
+
+    shop_product = cart_item.shop_product
+    product = shop_product.product
+    shop = shop_product.shop
+
     response = CartItemResponse(
         id=cart_item.id,
         user_id=cart_item.user_id,
-        product_id=product.id,
+        shop_product_id=shop_product.id,
         quantity=cart_item.quantity,
         created_at=cart_item.created_at,
         updated_at=cart_item.updated_at,
         product_name=product.name,
-        product_price=product.sale_price if product.sale_price else product.price,
+        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price if shop_product.price is not None else (product.sale_price if product.sale_price else product.price),
         total_price=cart_item.total_price,
-        product_image=product.images[0].image_url if product.images else None
+        product_image=product.images[0].image_url if product.images else None,
+        shop_name=shop.name
     )
-    
     return response
 
 
@@ -76,24 +76,24 @@ def update_item_in_cart(
     cart_item = update_cart_item(db, cart_item_id, current_user.id, item.quantity)
     if not cart_item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found in cart")
-    
-    # Get full product information to return in response
-    product = cart_item.product
-    
-    # Create response with product information
+
+    shop_product = cart_item.shop_product
+    product = shop_product.product
+    shop = shop_product.shop
+
     response = CartItemResponse(
         id=cart_item.id,
         user_id=cart_item.user_id,
-        product_id=product.id,
+        shop_product_id=shop_product.id,
         quantity=cart_item.quantity,
         created_at=cart_item.created_at,
         updated_at=cart_item.updated_at,
         product_name=product.name,
-        product_price=product.sale_price if product.sale_price else product.price,
+        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price if shop_product.price is not None else (product.sale_price if product.sale_price else product.price),
         total_price=cart_item.total_price,
-        product_image=product.images[0].image_url if product.images else None
+        product_image=product.images[0].image_url if product.images else None,
+        shop_name=shop.name
     )
-    
     return response
 
 

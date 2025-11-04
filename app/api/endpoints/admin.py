@@ -28,7 +28,7 @@ from app.crud.product import (
 from app.crud.order import get_order, update_order_status, update_payment_status, update_shipping_info
 from app.db.session import get_db
 from app.models.order import OrderStatus, PaymentStatus
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.admin import (
     BannerCreate,
     BannerUpdate,
@@ -41,6 +41,7 @@ from app.schemas.admin import (
     DashboardSummary
 )
 from app.utils.file_upload import save_upload_file
+from app.models.admin import Banner
 
 router = APIRouter()
 
@@ -57,14 +58,69 @@ def check_admin_access(current_user: User):
 # Dashboard
 @router.get("/dashboard", response_model=DashboardSummary)
 def get_dashboard(
+    shop_id: Optional[uuid.UUID] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get dashboard statistics
+    - For superadmins/admins: Can view global dashboard or specific shop stats by providing shop_id
+    - For logist users: Can only view stats for their assigned shop
     """
-    check_admin_access(current_user)
-    return get_dashboard_stats(db)
+    # Handle access control based on user role
+    if current_user.role == UserRole.LOGIST:
+        # Logist users can only see their assigned shop's dashboard
+        if not current_user.shop_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not assigned to any shop"
+            )
+        
+        # Force the shop_id parameter to be the logist's assigned shop
+        shop_id = current_user.shop_id
+        
+    elif current_user.role in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+        # Admin/Superadmin can see global dashboard or filter by shop_id
+        pass
+    else:
+        # Other roles don't have access
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access dashboard"
+        )
+    
+    # Get dashboard stats with appropriate shop filtering
+    return get_dashboard_stats(db, shop_id)
+
+
+@router.get("/shop-dashboard/{shop_id}", response_model=DashboardSummary)
+def get_shop_dashboard(
+    shop_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get dashboard statistics for a specific shop
+    - For superadmins/admins: Can view any shop's dashboard
+    - For logist users: Can only view their assigned shop's dashboard
+    """
+    # Check if user has access to this shop's dashboard
+    if current_user.role == UserRole.LOGIST:
+        # Logist users can only see their assigned shop's dashboard
+        if not current_user.shop_id or current_user.shop_id != shop_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to access this shop's dashboard"
+            )
+    elif current_user.role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+        # Other roles don't have access
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access dashboard"
+        )
+    
+    # Get shop-specific dashboard stats
+    return get_dashboard_stats(db, shop_id)
 
 
 # Banner management

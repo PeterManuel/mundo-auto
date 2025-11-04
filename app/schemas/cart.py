@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class CartItemBase(BaseModel):
-    product_id: uuid.UUID
+    shop_product_id: uuid.UUID
     quantity: int = Field(1, ge=1)
 
 
@@ -26,7 +26,9 @@ class CartItemResponse(CartItemBase):
     product_name: str
     product_price: float
     product_image: Optional[str] = None
+    shop_name: str
     total_price: float
+    shop_product_id: uuid.UUID
     
     class Config:
         from_attributes = True

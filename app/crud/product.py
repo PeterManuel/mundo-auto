@@ -41,7 +41,7 @@ def create_category(db: Session, category: CategoryCreate) -> Category:
         slug=category.slug,
         description=category.description,
         parent_id=None,  # Always None for flat category structure
-        image=category.image,
+        image=category.image,  # base64 string
     )
     db.add(db_category)
     db.commit()
@@ -67,7 +67,7 @@ def update_category(
         update_data.pop("parent_id")
     
     for field, value in update_data.items():
-        setattr(db_category, field, value)
+        setattr(db_category, field, value)  # image is base64 string
     
     db.add(db_category)
     db.commit()
@@ -101,6 +101,8 @@ def get_products(
     category_id: Optional[uuid.UUID] = None,
     brand: Optional[str] = None,
     oe_number: Optional[str] = None,
+    model: Optional[str] = None,
+    manufacturer_year: Optional[int] = None,
     search_query: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -116,6 +118,12 @@ def get_products(
     if brand:
         query = query.filter(Product.brand == brand)
     
+    if model:
+        query = query.filter(Product.model == model)
+    
+    if manufacturer_year:
+        query = query.filter(Product.manufacturer_year == manufacturer_year)
+    
     if oe_number:
         query = query.filter(Product.oe_number == oe_number)
     
@@ -124,7 +132,8 @@ def get_products(
         query = query.filter(
             (Product.name.ilike(search_term)) | 
             (Product.description.ilike(search_term)) | 
-            (Product.oe_number.ilike(search_term))
+            (Product.oe_number.ilike(search_term)) |
+            (Product.model.ilike(search_term))
         )
     
     if min_price is not None:
@@ -205,26 +214,26 @@ def delete_product(db: Session, product_id: uuid.UUID) -> bool:
 
 # Product Image CRUD
 def add_product_image(
-    db: Session, product_id: uuid.UUID, image_url: str, alt_text: Optional[str] = None, is_primary: bool = False
-) -> ProductImage:
-    # If this is set as primary, unset other primary images
-    if is_primary:
-        db.query(ProductImage).filter(
-            ProductImage.product_id == product_id, 
-            ProductImage.is_primary == True
-        ).update({"is_primary": False})
+    db: Session, product_id: uuid.UUID, image_data: str, alt_text: Optional[str] = None, is_primary: bool = False
+    ) -> ProductImage:
+        # If this is set as primary, unset other primary images
+        if is_primary:
+            db.query(ProductImage).filter(
+                ProductImage.product_id == product_id, 
+                ProductImage.is_primary == True
+            ).update({"is_primary": False})
     
-    db_image = ProductImage(
-        product_id=product_id,
-        image_url=image_url,
-        alt_text=alt_text,
-        is_primary=is_primary
-    )
+        db_image = ProductImage(
+            product_id=product_id,
+            image_data=image_data,  # base64 string
+            alt_text=alt_text,
+            is_primary=is_primary
+        )
     
-    db.add(db_image)
-    db.commit()
-    db.refresh(db_image)
-    return db_image
+        db.add(db_image)
+        db.commit()
+        db.refresh(db_image)
+        return db_image
 
 
 def delete_product_image(db: Session, image_id: uuid.UUID) -> bool:
