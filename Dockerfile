@@ -7,7 +7,9 @@ WORKDIR /app
 # Set environment variables
 ENV PYTHONPATH=/app \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PORT=8000 \
+    POSTGRES_PORT=5432
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -34,8 +36,20 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads/avatars uploads/products static/images/products
 
+# Create a script to run the application
+RUN echo '#!/bin/sh\n\
+if [ -z "$PORT" ]; then\n\
+    export PORT=8000\n\
+fi\n\
+if [ -z "$POSTGRES_PORT" ]; then\n\
+    export POSTGRES_PORT=5432\n\
+fi\n\
+poetry run alembic upgrade head\n\
+poetry run uvicorn app.main:app --host 0.0.0.0 --port $PORT\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
 # Expose port
 EXPOSE 8000
 
-# Command to run migrations and start the application
-CMD ["poetry", "run","uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the start script
+CMD ["/app/start.sh"]
