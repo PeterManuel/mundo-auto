@@ -29,4 +29,3 @@ EXPOSE 8000
 
 # Comando para executar a aplicação
 CMD ["poetry", "run","uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-

@@ -1,10 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any, Dict, Optional, Union
-from dotenv import load_dotenv
-import os
-
-# Load the environment variables from .env file
-load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -12,26 +7,16 @@ class Settings(BaseSettings):
     PROJECT_VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     
-    # Security
-    SECRET_KEY: str = "your_super_secret_key_here_change_in_production"
+    SECRET_KEY: str = "supersecretkey"  # Change in production
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # Database - These will be loaded from environment variables
-    DATABASE_URL: Optional[str] = None
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    # Database
+    POSTGRES_SERVER: str = "dpg-d3qulr7diees73alaugg-a.oregon-postgres.render.com"
+    POSTGRES_USER: str = "mundo_auto_user"
+    POSTGRES_PASSWORD: str = "TGfVWQNQitGvvFJbMsS3zZIIcwb2I65B"
     POSTGRES_DB: str = "mundo_auto"
-    POSTGRES_PORT: int = 5432
-    
-    @property
-    def DATABASE_URI(self) -> str:
-        # If DATABASE_URL is provided, use it directly
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
-        # Otherwise construct from components
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    POSTGRES_PORT: str = "5432"
     
     # Social Login
     GOOGLE_CLIENT_ID: Optional[str] = None
@@ -53,23 +38,11 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding='utf-8',
-        case_sensitive=True,
-        extra='ignore'
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', case_sensitive=True)
+    
+    @property
+    def DATABASE_URI(self) -> str:
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
-# Initialize settings with environment variables
-settings = Settings(
-    PROJECT_NAME=os.getenv("PROJECT_NAME", "MundoAuto"),
-    PROJECT_VERSION=os.getenv("PROJECT_VERSION", "0.1.0"),
-    SECRET_KEY=os.getenv("SECRET_KEY", "your_super_secret_key_here_change_in_production"),
-    POSTGRES_SERVER=os.getenv("POSTGRES_SERVER", "localhost"),
-    POSTGRES_USER=os.getenv("POSTGRES_USER", "postgres"),
-    POSTGRES_PASSWORD=os.getenv("POSTGRES_PASSWORD", "postgres"),
-    POSTGRES_DB=os.getenv("POSTGRES_DB", "mundo_auto"),
-    POSTGRES_PORT=int(os.getenv("POSTGRES_PORT", "5432")),
-    DATABASE_URL=os.getenv("DATABASE_URL"),
-)
+settings = Settings()
