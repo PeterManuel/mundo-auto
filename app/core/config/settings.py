@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URI(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return "postgresql://mundo_auto_user:TGfVWQNQitGvvFJbMsS3zZIIcwb2I65B@dpg-d3qulr7diees73alaugg-a.oregon-postgres.render.com/mundo_auto"
 
 
 settings = Settings()
