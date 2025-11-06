@@ -57,6 +57,7 @@ class Product(Base):
     compatible_vehicles = Column(ARRAY(String), nullable=True)  # Array of vehicle compatibility
     weight = Column(Float, nullable=True)  # Weight in kg
     dimensions = Column(String, nullable=True)  # Format: "LxWxH" in cm
+    image = Column(Text, nullable=True)  # Base64 encoded image
     is_active = Column(Boolean, default=True)
     is_featured = Column(Boolean, default=False)
     is_on_sale = Column(Boolean, default=False)
@@ -65,25 +66,10 @@ class Product(Base):
     
     # Relationships
     categories = relationship("Category", secondary=product_category, back_populates="products")
-    images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     shop_products = relationship("ShopProduct", back_populates="product", cascade="all, delete-orphan")
     order_items = relationship("OrderItem", back_populates="product")
     reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
     wishlist_items = relationship("WishlistItem", back_populates="product")
-
-
-class ProductImage(Base):
-    __tablename__ = "product_images"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
-    image_data = Column(Text, nullable=False)  # Store base64 image string
-    alt_text = Column(String, nullable=True)
-    is_primary = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    product = relationship("Product", back_populates="images")
 
 
 class ProductReview(Base):

@@ -36,6 +36,7 @@ class ShopProductResponse(ShopProductBase):
     # Include basic product information
     product_name: str
     product_description: Optional[str] = None
+    product_image: Optional[str] = None  # Base64 encoded image
     model: Optional[str] = None
     manufacturer_year: Optional[int] = None
     
@@ -48,7 +49,7 @@ class ShopProductFullResponse(ShopProductResponse):
     Full response with product and shop details
     """
     shop_name: str
-    product_images: List[str] = []
+    product_image: Optional[str] = None  # Base64 encoded image
     product_categories: List[str] = []
     manufacturer: Optional[str] = None
     model: Optional[str] = None

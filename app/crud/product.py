@@ -5,7 +5,7 @@ from slugify import slugify
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.product import Category, Product, ProductImage, ProductReview
+from app.models.product import Category, Product, ProductReview
 from app.schemas.product import CategoryCreate, CategoryUpdate, ProductCreate, ProductUpdate
 
 
@@ -208,40 +208,6 @@ def delete_product(db: Session, product_id: uuid.UUID) -> bool:
         return False
     
     db.delete(db_product)
-    db.commit()
-    return True
-
-
-# Product Image CRUD
-def add_product_image(
-    db: Session, product_id: uuid.UUID, image_data: str, alt_text: Optional[str] = None, is_primary: bool = False
-    ) -> ProductImage:
-        # If this is set as primary, unset other primary images
-        if is_primary:
-            db.query(ProductImage).filter(
-                ProductImage.product_id == product_id, 
-                ProductImage.is_primary == True
-            ).update({"is_primary": False})
-    
-        db_image = ProductImage(
-            product_id=product_id,
-            image_data=image_data,  # base64 string
-            alt_text=alt_text,
-            is_primary=is_primary
-        )
-    
-        db.add(db_image)
-        db.commit()
-        db.refresh(db_image)
-        return db_image
-
-
-def delete_product_image(db: Session, image_id: uuid.UUID) -> bool:
-    db_image = db.query(ProductImage).filter(ProductImage.id == image_id).first()
-    if not db_image:
-        return False
-    
-    db.delete(db_image)
     db.commit()
     return True
 

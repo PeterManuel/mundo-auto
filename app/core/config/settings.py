@@ -12,11 +12,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Database
-    POSTGRES_SERVER: str = "dpg-d3qulr7diees73alaugg-a.oregon-postgres.render.com"
-    POSTGRES_USER: str = "mundo_auto_user"
-    POSTGRES_PASSWORD: str = "TGfVWQNQitGvvFJbMsS3zZIIcwb2I65B"
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "mundo_auto"
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: str = "5432"
     
     # Social Login
     GOOGLE_CLIENT_ID: Optional[str] = None

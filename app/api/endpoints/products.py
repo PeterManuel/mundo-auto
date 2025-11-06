@@ -16,8 +16,6 @@ from app.crud.product import (
     create_category,
     update_category,
     delete_category,
-    add_product_image,
-    delete_product_image,
     create_product_review,
     get_product_reviews
 )

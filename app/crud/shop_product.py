@@ -61,9 +61,9 @@ def get_shop_products(
     # Start with a join to include product, shop, and category information
     query = (
         db.query(ShopProduct)
-        .join(ShopProduct.product)  # Join with Product
-        .join(ShopProduct.shop)     # Join with Shop
-        .join(Product.categories)   # Join with Categories
+        .join(ShopProduct.product)  # Join with Product (inner join as this is required)
+        .join(ShopProduct.shop)     # Join with Shop (inner join as this is required)
+        .outerjoin(Product.categories)   # Left join with Categories as they are optional
     )
     
     # Apply filters
@@ -77,7 +77,8 @@ def get_shop_products(
         query = query.filter(ShopProduct.product_id == product_id)
     
     if category:
-        query = query.filter(Category.name.ilike(f"%{category}%"))
+        # When filtering by category, make sure to handle NULL cases for products without categories
+        query = query.filter(Category.name.ilike(f"%{category}%") if category else True)
     
     if brand:
         query = query.filter(Product.brand.ilike(f"%{brand}%"))

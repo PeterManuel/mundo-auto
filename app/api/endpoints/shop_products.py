@@ -123,8 +123,9 @@ def read_shop_products(
     for sp in shop_products:
         product = sp.product
         shop = sp.shop
-        product_images = [img.image_url for img in product.images]
-        product_categories = [category.name for category in product.categories]
+        # Handle image field - should be None if no image exists
+        product_image = product.image if product and hasattr(product, 'image') else None
+        product_categories = [category.name for category in product.categories] if product and product.categories else []
         
         result.append(
             ShopProductFullResponse(
@@ -141,7 +142,7 @@ def read_shop_products(
                 product_name=product.name,
                 product_description=product.description,
                 shop_name=shop.name,
-                product_images=product_images,
+                product_image=product_image,
                 model=product.model,
                 manufacturer_year=product.manufacturer_year,
                 product_categories=product_categories,
@@ -167,10 +168,8 @@ def read_shop_product(
     product = shop_product.product
     shop = shop_product.shop
     
-    # Get product images
-    product_images = []
-    if product.images:
-        product_images = [image.image_url for image in product.images]
+    # Get product image
+    product_image = product.image if product else None
     
     # Get product categories
     product_categories = []
@@ -192,7 +191,7 @@ def read_shop_product(
         product_name=product.name,
         product_description=product.description,
         shop_name=shop.name,
-        product_images=product_images,
+        product_image=product_image,
         product_categories=product_categories,
         manufacturer=product.manufacturer
     )
@@ -229,8 +228,8 @@ def create_shop_product_endpoint(
     # Create shop product
     db_shop_product = create_shop_product(db, shop_product)
     
-    # Get product images and categories
-    product_images = [img.image_url for img in product.images]
+    # Get product image and categories
+    product_image = product.image
     product_categories = [category.name for category in product.categories]
     
     # Prepare response with product and shop information
@@ -248,7 +247,7 @@ def create_shop_product_endpoint(
         product_name=product.name,
         product_description=product.description,
         shop_name=shop.name,
-        product_images=product_images,
+        product_image=product_image,
         product_categories=product_categories
     )
     

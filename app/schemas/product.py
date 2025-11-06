@@ -57,6 +57,7 @@ class ProductBase(BaseModel):
     compatible_vehicles: Optional[List[str]] = None
     weight: Optional[float] = None
     dimensions: Optional[str] = None
+    image: Optional[str] = None  # Base64 encoded image
     is_featured: bool = False
     is_on_sale: bool = False
 
@@ -72,23 +73,12 @@ class ProductUpdate(ProductBase):
     category_ids: Optional[List[uuid.UUID]] = None
 
 
-class ProductImageResponse(BaseModel):
-    id: uuid.UUID
-    image_data: str  # base64 string
-    alt_text: Optional[str] = None
-    is_primary: bool
-    
-    class Config:
-        from_attributes = True
-
-
 class ProductResponse(ProductBase):
     id: uuid.UUID
     slug: str
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    images: List[ProductImageResponse] = []
     categories: List[CategoryResponse] = []
     model: Optional[str] = None
     manufacturer_year: Optional[int] = None
