@@ -4,7 +4,6 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.models.cart import CartItem
-from app.models.product import Product
 
 
 def get_cart_items(db: Session, user_id: uuid.UUID) -> List[CartItem]:
@@ -31,17 +30,18 @@ def get_cart_item_by_shop_product(db: Session, shop_product_id: uuid.UUID, user_
     )
 
 
-def get_cart_item_by_product_and_shop(db: Session, product_id: uuid.UUID, shop_id: uuid.UUID, user_id: uuid.UUID) -> Optional[CartItem]:
-    """Get cart item by product ID, shop ID, and user ID"""
-    return (
-        db.query(CartItem)
-        .filter(
-            CartItem.product_id == product_id,
-            CartItem.shop_id == shop_id,
-            CartItem.user_id == user_id
-        )
-        .first()
-    )
+# This function is no longer needed since we work directly with shop_products
+# def get_cart_item_by_product_and_shop(db: Session, product_id: uuid.UUID, shop_id: uuid.UUID, user_id: uuid.UUID) -> Optional[CartItem]:
+#     """Get cart item by product ID, shop ID, and user ID"""
+#     return (
+#         db.query(CartItem)
+#         .filter(
+#             CartItem.product_id == product_id,
+#             CartItem.shop_id == shop_id,
+#             CartItem.user_id == user_id
+#         )
+#         .first()
+#     )
 
 
 def add_to_cart(db: Session, user_id: uuid.UUID, shop_product_id: uuid.UUID, quantity: int) -> CartItem:
@@ -109,7 +109,6 @@ def get_cart_summary(db: Session, user_id: uuid.UUID) -> Dict:
     items = []
     for cart_item in cart_items:
         shop_product = cart_item.shop_product
-        product = shop_product.product
         shop = shop_product.shop
         items.append({
             "id": cart_item.id,
@@ -118,10 +117,10 @@ def get_cart_summary(db: Session, user_id: uuid.UUID) -> Dict:
             "quantity": cart_item.quantity,
             "created_at": cart_item.created_at,
             "updated_at": cart_item.updated_at,
-            "product_name": product.name,
-            "product_price": shop_product.sale_price if shop_product.sale_price else shop_product.price if shop_product.price is not None else (product.sale_price if product.sale_price else product.price),
+            "product_name": shop_product.name,
+            "product_price": shop_product.sale_price if shop_product.sale_price else shop_product.price,
             "total_price": cart_item.total_price,
-            "product_image": product.images[0].image_url if product.images else None,
+            "product_image": shop_product.image,
             "shop_name": shop.name
         })
 

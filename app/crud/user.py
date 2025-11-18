@@ -98,6 +98,35 @@ def update_user(db: Session, user_id: uuid.UUID, user: UserUpdate) -> Optional[U
         update_data["hashed_password"] = get_password_hash(update_data["password"])
         del update_data["password"]
     
+    if "profile_image_b64" in update_data:
+        if update_data["profile_image_b64"]:
+            import base64
+            import os
+            from datetime import datetime
+            
+            # Extract the base64 data after the comma
+            base64_data = update_data["profile_image_b64"].split(',')[1]
+            
+            # Determine the file extension from the data URI
+            image_format = update_data["profile_image_b64"].split(';')[0].split('/')[1]
+            
+            # Generate a unique filename
+            filename = f"{user_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{image_format}"
+            directory = "static/images/avatars"
+            
+            # Ensure directory exists
+            os.makedirs(directory, exist_ok=True)
+            
+            # Save the image
+            file_path = os.path.join(directory, filename)
+            with open(file_path, "wb") as f:
+                f.write(base64.b64decode(base64_data))
+            
+            # Update the profile_image field with the file path
+            update_data["profile_image"] = f"/static/images/avatars/{filename}"
+            
+        del update_data["profile_image_b64"]
+    
     for field, value in update_data.items():
         setattr(db_user, field, value)
     

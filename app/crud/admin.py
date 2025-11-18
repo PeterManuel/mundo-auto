@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.models.admin import Banner, SystemSetting, Report
 from app.models.order import Order, OrderItem, OrderStatus, PaymentStatus
-from app.models.product import Product
 from app.models.shop import Shop
 from app.models.user import User
 from app.models.shop_product import ShopProduct
@@ -111,8 +110,8 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     
     # If shop_id is provided, filter all queries by that shop
     if shop_id:
-        # Join with OrderItem to filter by shop_id
-        orders_query = orders_query.join(OrderItem).filter(OrderItem.shop_id == shop_id)
+        # Join with OrderItem then ShopProduct to filter by shop_id
+        orders_query = orders_query.join(OrderItem).join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id).filter(ShopProduct.shop_id == shop_id)
         shop_products_query = shop_products_query.filter(ShopProduct.shop_id == shop_id)
     
     # Total sales
@@ -128,14 +127,14 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
         .count()
     ) or 0
     
-    # Total products (distinct products in this shop or all shops)
+    # Total products (shop products in this shop or all shops)
     if shop_id:
         total_products = (
-            shop_products_query.with_entities(func.count(func.distinct(ShopProduct.product_id)))
+            shop_products_query.with_entities(func.count(ShopProduct.id))
             .scalar()
         ) or 0
     else:
-        total_products = db.query(func.count(Product.id)).scalar() or 0
+        total_products = db.query(func.count(ShopProduct.id)).scalar() or 0
     
     # Low stock products - now using ShopProduct for stock info
     low_stock_threshold = 5  # Define threshold for low stock
@@ -161,13 +160,13 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     # Base query for top products
     top_products_base_query = (
         db.query(
-            Product.id,
-            Product.name,
-            Product.price,
+            ShopProduct.id,
+            ShopProduct.name,
+            ShopProduct.price,
             func.sum(OrderItem.quantity).label("total_quantity"),
             func.sum(OrderItem.price * OrderItem.quantity).label("total_sales")
         )
-        .join(OrderItem, OrderItem.product_id == Product.id)
+        .join(OrderItem, OrderItem.shop_product_id == ShopProduct.id)
         .join(Order, and_(
             Order.id == OrderItem.order_id,
             Order.created_at >= last_month
@@ -176,12 +175,12 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     
     # Apply shop filter if needed
     if shop_id:
-        top_products_base_query = top_products_base_query.filter(OrderItem.shop_id == shop_id)
+        top_products_base_query = top_products_base_query.filter(ShopProduct.shop_id == shop_id)
     
     # Complete the query with grouping and ordering
     top_products_query = (
         top_products_base_query
-        .group_by(Product.id, Product.name, Product.price)
+        .group_by(ShopProduct.id, ShopProduct.name, ShopProduct.price)
         .order_by(desc("total_quantity"))
         .limit(5)
         .all()
@@ -214,7 +213,7 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     
     # Apply shop filter if needed
     if shop_id:
-        recent_orders_base_query = recent_orders_base_query.join(OrderItem).filter(OrderItem.shop_id == shop_id)
+        recent_orders_base_query = recent_orders_base_query.join(OrderItem).join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id).filter(ShopProduct.shop_id == shop_id)
     
     # Complete the query with ordering and limit
     recent_orders_query = (

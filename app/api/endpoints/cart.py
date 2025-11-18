@@ -44,7 +44,6 @@ def add_item_to_cart(
     cart_item = add_to_cart(db, current_user.id, item.shop_product_id, item.quantity)
 
     shop_product = cart_item.shop_product
-    product = shop_product.product
     shop = shop_product.shop
 
     response = CartItemResponse(
@@ -54,10 +53,10 @@ def add_item_to_cart(
         quantity=cart_item.quantity,
         created_at=cart_item.created_at,
         updated_at=cart_item.updated_at,
-        product_name=product.name,
-        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price if shop_product.price is not None else (product.sale_price if product.sale_price else product.price),
+        product_name=shop_product.name,
+        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price,
         total_price=cart_item.total_price,
-        product_image=product.images[0].image_url if product.images else None,
+        product_image=shop_product.image,
         shop_name=shop.name
     )
     return response
@@ -78,7 +77,6 @@ def update_item_in_cart(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found in cart")
 
     shop_product = cart_item.shop_product
-    product = shop_product.product
     shop = shop_product.shop
 
     response = CartItemResponse(
@@ -88,10 +86,10 @@ def update_item_in_cart(
         quantity=cart_item.quantity,
         created_at=cart_item.created_at,
         updated_at=cart_item.updated_at,
-        product_name=product.name,
-        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price if shop_product.price is not None else (product.sale_price if product.sale_price else product.price),
+        product_name=shop_product.name,
+        product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price,
         total_price=cart_item.total_price,
-        product_image=product.images[0].image_url if product.images else None,
+        product_image=shop_product.image,
         shop_name=shop.name
     )
     return response

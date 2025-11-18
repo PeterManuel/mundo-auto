@@ -8,8 +8,7 @@ from app.models.order import OrderStatus, PaymentMethod, PaymentStatus
 
 
 class OrderItemBase(BaseModel):
-    product_id: uuid.UUID
-    shop_id: uuid.UUID
+    shop_product_id: uuid.UUID
     quantity: int = Field(..., ge=1)
     price: float
 
@@ -23,7 +22,10 @@ class OrderItemResponse(OrderItemBase):
     order_id: uuid.UUID
     product_name: str
     shop_name: str
-    total_price: float
+    
+    @property
+    def total_price(self) -> float:
+        return self.price * self.quantity
     
     class Config:
         from_attributes = True

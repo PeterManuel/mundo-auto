@@ -1,7 +1,16 @@
 from typing import List, Optional, Dict
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+import base64
+import mimetypes
+from datetime import datetime
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+
+from app.api.endpoints.auth import get_current_user
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -34,8 +43,8 @@ from app.schemas.user import (
     UserCount,
     BulkUserIds,
     BulkOperationResponse,
+    ProfileImageUpdate,
 )
-from app.utils.file_upload import save_upload_file
 
 router = APIRouter()
 
@@ -85,17 +94,43 @@ async def upload_avatar(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Upload user avatar
+    Upload user avatar and convert to base64
     """
-    # Save file
-    filename = await save_upload_file(file, "avatars")
-    file_url = f"/uploads/avatars/{filename}"
+    # Read the file content
+    contents = await file.read()
     
-    # Update user profile
-    user_update = UserUpdate(profile_image=file_url)
+    # Get the mime type
+    mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'image/jpeg'
+    
+    # Convert to base64
+    base64_data = base64.b64encode(contents).decode()
+    base64_image = f"data:{mime_type};base64,{base64_data}"
+    
+    # Update user profile with base64 string
+    db_user = update_user(db, user_id=current_user.id, user=UserUpdate(profile_image=base64_image))
+    
+    return db_user
+    
+    # Read the file content
+    contents = await file.read()
+    
+    # Get the mime type
+    mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'image/jpeg'
+    
+    # Convert to base64
+    base64_data = base64.b64encode(contents).decode()
+    
+    # Create the complete base64 string with data URI scheme
+    base64_image = f"data:{mime_type};base64,{base64_data}"
+    
+    # Update user profile with base64 string
+    user_update = UserUpdate(profile_image=base64_image)
     db_user = update_user(db, user_id=current_user.id, user=user_update)
     
     return db_user
+
+
+
 
 
 @router.get("/me/login-history", response_model=List[LoginHistoryResponse])

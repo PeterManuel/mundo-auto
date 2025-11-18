@@ -21,7 +21,7 @@ from app.crud.product import (
 )
 from app.crud.shop_product import (
     get_shop_products,
-    get_products_by_shops
+    get_shop_products_by_name_or_oe
 )
 from app.db.session import get_db
 from app.models.user import User
@@ -221,18 +221,28 @@ def read_product(
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     
-    # Get shop information for this product
-    shop_info = get_products_by_shops(db, product.id)
+    # Get shop products with this name or OE number
+    shop_info = []
+    if product.name:
+        shop_info.extend(get_shop_products_by_name_or_oe(db, name=product.name))
+    if product.oe_number:
+        shop_info.extend(get_shop_products_by_name_or_oe(db, oe_number=product.oe_number))
+    
+    # Remove duplicates based on shop_id
+    seen_shops = set()
+    unique_shop_info = []
+    for info in shop_info:
+        if info["shop_id"] not in seen_shops:
+            seen_shops.add(info["shop_id"])
+            unique_shop_info.append(info)
     
     # Create response
     response_dict = {
         **product.__dict__,
-        "shop_info": shop_info
+        "shop_info": unique_shop_info
     }
     
     return response_dict
-    
-    return product
 
 
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)

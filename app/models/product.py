@@ -35,6 +35,7 @@ class Category(Base):
     
     # Many-to-many relationship with products
     products = relationship("Product", secondary=product_category, back_populates="categories")
+    shop_products = relationship("ShopProduct", secondary="shop_product_category", back_populates="categories")
 
 
 class Product(Base):
@@ -66,8 +67,6 @@ class Product(Base):
     
     # Relationships
     categories = relationship("Category", secondary=product_category, back_populates="products")
-    shop_products = relationship("ShopProduct", back_populates="product", cascade="all, delete-orphan")
-    order_items = relationship("OrderItem", back_populates="product")
     reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
     wishlist_items = relationship("WishlistItem", back_populates="product")
 

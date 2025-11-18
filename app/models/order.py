@@ -64,8 +64,7 @@ class OrderItem(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
-    shop_id = Column(UUID(as_uuid=True), ForeignKey("shops.id"), nullable=False)
+    shop_product_id = Column(UUID(as_uuid=True), ForeignKey("shop_products.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)  # Price at the time of purchase
     product_name = Column(String, nullable=False)  # Store product name at time of purchase
@@ -74,8 +73,7 @@ class OrderItem(Base):
     
     # Relationships
     order = relationship("Order", back_populates="items")
-    product = relationship("Product", back_populates="order_items")
-    shop = relationship("Shop")
+    shop_product = relationship("ShopProduct", back_populates="order_items")
 
 
 class OrderStatusUpdate(Base):

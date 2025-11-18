@@ -25,9 +25,6 @@ class CartItem(Base):
 
     @property
     def total_price(self):
-        # Use shop_product price if available
+        # Use shop_product price (sale_price has priority over regular price)
         price = self.shop_product.sale_price if self.shop_product.sale_price else self.shop_product.price
-        if price is None:
-            # Fallback to product price
-            price = self.shop_product.product.sale_price if self.shop_product.product.sale_price else self.shop_product.product.price
-        return price * self.quantity
+        return price * self.quantity if price is not None else 0.0

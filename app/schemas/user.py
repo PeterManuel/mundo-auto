@@ -15,13 +15,13 @@ class UserRole(str, Enum):
 
 # Base User schemas
 class UserBase(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone_number: Optional[str] = None
     address: Optional[str] = None
     profile_image: Optional[str] = None
-    role: UserRole = UserRole.CUSTOMER
+    role: Optional[UserRole] = None
     shop_id: Optional[uuid.UUID] = None
 
 
@@ -44,6 +44,22 @@ class AdminUserCreate(UserCreate):
 
 class UserUpdate(UserBase):
     password: Optional[str] = Field(None, min_length=8)
+    profile_image_b64: Optional[str] = None
+
+    @validator('profile_image_b64')
+    def validate_base64_image(cls, v):
+        if v is not None:
+            try:
+                # Check if it's a valid base64 string
+                if not v.startswith('data:image/'):
+                    raise ValueError('Invalid base64 image format. Must start with data:image/')
+                # Extract the actual base64 string after the comma
+                base64_data = v.split(',')[1]
+                import base64
+                base64.b64decode(base64_data)
+            except Exception as e:
+                raise ValueError('Invalid base64 image format')
+        return v
 
 
 class UserResponse(UserBase):
@@ -123,6 +139,12 @@ class UserCount(BaseModel):
 class BulkUserIds(BaseModel):
     """Schema for bulk operations on users"""
     user_ids: List[uuid.UUID]
+
+
+
+class ProfileImageUpdate(BaseModel):
+    """Schema for updating profile image"""
+    profile_image: str = Field(..., description="The profile image URL or base64 string")
 
 
 class BulkOperationResponse(BaseModel):

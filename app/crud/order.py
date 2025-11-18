@@ -8,9 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.models.order import Order, OrderItem, OrderStatus, OrderStatusUpdate, PaymentStatus
 from app.models.cart import CartItem
-from app.models.product import Product
-from app.models.shop import Shop
-from app.models.shop_product import ShopProduct
 
 
 def generate_order_number():
@@ -37,20 +34,10 @@ def create_order_from_cart(
     # Calculate total amount
     total_amount = 0
     for item in cart_items:
-        product = db.query(Product).filter(Product.id == item.product_id).first()
-        if product:
-            # Get shop-specific price if available
-            shop_product = db.query(ShopProduct).filter(
-                ShopProduct.product_id == product.id,
-                ShopProduct.shop_id == item.shop_id
-            ).first()
-            
-            # Use shop-specific price if available, otherwise use product's price
-            if shop_product and shop_product.price:
-                price = shop_product.sale_price if shop_product.sale_price else shop_product.price
-            else:
-                price = product.sale_price if product.sale_price else product.price
-                
+        shop_product = item.shop_product
+        if shop_product:
+            # Use shop product price (sale_price has priority over regular price)
+            price = shop_product.sale_price if shop_product.sale_price else shop_product.price
             total_amount += price * item.quantity
     
     # Create order
@@ -70,36 +57,24 @@ def create_order_from_cart(
     # Create order items from cart
     order_items = []
     for cart_item in cart_items:
-        product = db.query(Product).filter(Product.id == cart_item.product_id).first()
-        shop = db.query(Shop).filter(Shop.id == cart_item.shop_id).first()
+        shop_product = cart_item.shop_product
         
-        if product and shop:
-            # Get shop-specific product details
-            shop_product = db.query(ShopProduct).filter(
-                ShopProduct.product_id == product.id,
-                ShopProduct.shop_id == shop.id
-            ).first()
-            
-            # Use shop-specific price if available, otherwise use product's price
-            if shop_product and shop_product.price:
-                price = shop_product.sale_price if shop_product.sale_price else shop_product.price
-            else:
-                price = product.sale_price if product.sale_price else product.price
+        if shop_product:
+            # Use shop product price (sale_price has priority over regular price)
+            price = shop_product.sale_price if shop_product.sale_price else shop_product.price
             
             order_item = OrderItem(
                 order_id=new_order.id,
-                product_id=product.id,
-                shop_id=shop.id,
+                shop_product_id=shop_product.id,
                 quantity=cart_item.quantity,
                 price=price,
-                product_name=product.name,
-                shop_name=shop.name
+                product_name=shop_product.name,
+                shop_name=shop_product.shop.name
             )
             
             # Update shop inventory
-            if shop_product:
-                shop_product.stock_quantity = max(0, shop_product.stock_quantity - cart_item.quantity)
-                db.add(shop_product)
+            shop_product.stock_quantity = max(0, shop_product.stock_quantity - cart_item.quantity)
+            db.add(shop_product)
             
             order_items.append(order_item)
     

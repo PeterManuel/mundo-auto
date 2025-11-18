@@ -33,14 +33,19 @@ def create_category(db: Session, category: CategoryCreate) -> Category:
     if not category.slug:
         category.slug = slugify(category.name)
     
-    # Always set parent_id to None for flat category structure
-    # This ignores any parent_id that might be provided
+    # Check if parent_id exists and is valid if provided
+    parent_id = None
+    if category.parent_id is not None:
+        parent = get_category(db, category.parent_id)
+        if not parent:
+            raise ValueError("Parent category not found")
+        parent_id = category.parent_id
     
     db_category = Category(
         name=category.name,
         slug=category.slug,
         description=category.description,
-        parent_id=None,  # Always None for flat category structure
+        parent_id=parent_id,
         image=category.image,  # base64 string
     )
     db.add(db_category)
@@ -62,9 +67,13 @@ def update_category(
     if "name" in update_data and "slug" not in update_data:
         update_data["slug"] = slugify(update_data["name"])
     
-    # Ensure parent_id is always None in updates
+    # Check if parent_id exists and is valid if provided
     if "parent_id" in update_data:
-        update_data.pop("parent_id")
+        if update_data["parent_id"] is not None:
+            parent = get_category(db, update_data["parent_id"])
+            if not parent:
+                raise ValueError("Parent category not found")
+        # If parent_id is None, it will remove the parent relationship
     
     for field, value in update_data.items():
         setattr(db_category, field, value)  # image is base64 string
