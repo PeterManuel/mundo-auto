@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Social Login
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: str = "https://mundo-auto-1.onrender.com/api/v1/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
     FACEBOOK_CLIENT_ID: Optional[str] = None
     FACEBOOK_CLIENT_SECRET: Optional[str] = None
 
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     UPLOAD_DIRECTORY: str = "uploads"
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://mundo-auto-1.onrender.com"]
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
     
     # Emails
     EMAILS_ENABLED: bool = False
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URI(self) -> str:
-        return "postgresql://mundo_auto_user:TGfVWQNQitGvvFJbMsS3zZIIcwb2I65B@dpg-d3qulr7diees73alaugg-a.oregon-postgres.render.com/mundo_auto"
+        return "postgresql://postgres:PdRCS!2024#@localhost:5432/mundo_auto"
 
 
 settings = Settings()

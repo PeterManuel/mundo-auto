@@ -13,9 +13,11 @@ from app.crud.shop import (
     update_shop,
     delete_shop,
 )
+from app.crud.invoice import get_invoice_data
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.shop import ShopCreate, ShopUpdate, ShopResponse
+from app.schemas.invoice import InvoiceData
 
 router = APIRouter()
 
@@ -125,3 +127,44 @@ def delete_shop_endpoint(
         raise HTTPException(status_code=404, detail="Shop not found")
     
     return
+
+
+@router.get("/{shop_id}/orders/{order_id}/invoice", response_model=InvoiceData)
+def get_order_invoice_data(
+    shop_id: uuid.UUID,
+    order_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get invoice data for a paid order from a specific shop.
+    Only returns data if the order is paid and contains items from the specified shop.
+    """
+    # Check if user has access to this shop
+    if current_user.role == UserRole.SUPERADMIN:
+        # Superadmin can access all shops
+        pass
+    elif current_user.role == UserRole.LOGIST:
+        # Logist can only access their assigned shop
+        if not current_user.shop_id or str(current_user.shop_id) != str(shop_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this shop's invoice data"
+            )
+    else:
+        # Other users cannot access invoice data
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access invoice data"
+        )
+    
+    # Get invoice data
+    invoice_data = get_invoice_data(db, order_id, shop_id)
+    
+    if not invoice_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice data not found. Order must be paid and contain items from this shop."
+        )
+    
+    return invoice_data

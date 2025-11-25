@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 import uuid
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
@@ -9,13 +10,20 @@ from sqlalchemy.orm import Session
 
 from app.core.config.settings import settings
 from app.core.security import create_access_token, verify_password, get_password_hash
-from app.crud.user import get_user_by_email, create_user, record_login_history, get_user, update_user
+from app.crud.user import (
+    get_user_by_email, create_user, record_login_history, get_user, update_user,
+    create_password_reset_token, get_user_by_reset_token, reset_user_password, clear_password_reset_token
+)
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import Token, TokenPayload, PasswordReset, PasswordUpdate, LoginCredentials
+from app.schemas.auth import (
+    Token, TokenPayload, PasswordReset, PasswordUpdate, LoginCredentials, 
+    PasswordResetRequest, PasswordResetConfirm
+)
 from app.schemas.user import UserCreate, UserResponse, GoogleAuthRequest
 from app.utils.auth import OAuth2PasswordBearerWithCookie
 from app.utils.oauth import GoogleOAuth
+from app.services.email import email_service
 
 router = APIRouter(
     tags=["authentication"],
@@ -168,36 +176,86 @@ def logout(response: Response):
 
 
 @router.post("/password-recovery")
-def recover_password(password_reset: PasswordReset, db: Session = Depends(get_db)):
+def recover_password(password_reset: PasswordResetRequest, db: Session = Depends(get_db)):
     """
     Password Recovery - sends an email with reset token
     """
     user = get_user_by_email(db, email=password_reset.email)
-    if not user:
-        # Don't reveal that email doesn't exist
-        return {"message": "If the email exists, a password recovery link has been sent"}
     
-    # In a real implementation, we would:
-    # 1. Generate a password reset token
-    # 2. Store it with an expiration time
-    # 3. Send an email with a link including the token
+    # Always return the same message to avoid user enumeration
+    response_message = "Si el correo electrónico existe en nuestro sistema, se ha enviado un enlace de recuperación"
     
-    # For now, we'll just return a success message
-    return {"message": "If the email exists, a password recovery link has been sent"}
+    if user and user.is_active:
+        # Generate secure reset token
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Token expires in 1 hour
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+        
+        # Save token to database
+        if create_password_reset_token(db, user.id, reset_token, expires_at):
+            # Send reset email
+            user_name = f"{user.first_name} {user.last_name}".strip() if user.first_name or user.last_name else None
+            email_sent = email_service.send_password_reset_email(
+                to_email=user.email,
+                reset_token=reset_token,
+                user_name=user_name
+            )
+            
+            if not email_sent:
+                # Log the error but don't reveal it to user
+                print(f"Failed to send password reset email to {user.email}")
+    
+    return {"message": response_message}
 
 
 @router.post("/reset-password")
-def reset_password(password_update: PasswordUpdate, db: Session = Depends(get_db)):
+def reset_password(password_reset: PasswordResetConfirm, db: Session = Depends(get_db)):
     """
     Reset password using token from email
     """
-    # In a real implementation, we would:
-    # 1. Verify the token is valid and not expired
-    # 2. Find the user associated with the token
-    # 3. Update their password
+    # Validate that passwords match
+    if password_reset.password != password_reset.password_confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Las contraseñas no coinciden"
+        )
     
-    # For now, we'll just return a success message
-    return {"message": "Password has been reset"}
+    # Find user by reset token
+    user = get_user_by_reset_token(db, password_reset.token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de recuperación inválido o expirado"
+        )
+    
+    # Reset the password
+    if reset_user_password(db, user.id, password_reset.password):
+        return {"message": "Tu contraseña ha sido actualizada exitosamente"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor al actualizar la contraseña"
+        )
+
+
+@router.post("/validate-reset-token")
+def validate_reset_token(token: str, db: Session = Depends(get_db)):
+    """
+    Validate if a password reset token is valid and not expired
+    """
+    user = get_user_by_reset_token(db, token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de recuperación inválido o expirado"
+        )
+    
+    return {
+        "valid": True,
+        "email": user.email,
+        "message": "Token válido"
+    }
 
 
 @router.get("/google/login")

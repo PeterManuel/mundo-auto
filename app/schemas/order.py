@@ -75,3 +75,47 @@ class OrderUpdate(BaseModel):
     tracking_number: Optional[str] = None
     shipping_company: Optional[str] = None
     notes: Optional[str] = None
+
+
+class OrderFilter(BaseModel):
+    """Schema for filtering shop orders"""
+    status: Optional[OrderStatus] = None
+    customer_id: Optional[uuid.UUID] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    skip: int = 0
+    limit: int = 100
+
+
+class OrderStatusUpdate(BaseModel):
+    """Schema for updating order status with comment"""
+    status: OrderStatus
+    comment: Optional[str] = None
+
+
+class ShopOrderSummary(BaseModel):
+    """Summary of orders for a shop"""
+    total_orders: int
+    pending_orders: int
+    processing_orders: int
+    shipped_orders: int
+    delivered_orders: int
+    cancelled_orders: int
+    total_revenue: float
+    
+    class Config:
+        from_attributes = True
+
+
+class CustomerOrderHistory(BaseModel):
+    """Customer order history for a specific shop"""
+    customer_id: uuid.UUID
+    customer_name: str
+    customer_email: str
+    total_orders: int
+    total_spent: float
+    last_order_date: Optional[datetime] = None
+    orders: List[OrderResponse] = []
+    
+    class Config:
+        from_attributes = True

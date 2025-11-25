@@ -32,3 +32,17 @@ class PasswordUpdate(BaseModel):
         if 'password' in values and v != values['password']:
             raise ValueError('Passwords do not match')
         return v
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    password: str = Field(..., min_length=8, alias="new_password")
+    password_confirm: str = Field(..., min_length=8, alias="confirm_password")
+    
+    class Config:
+        validate_assignment = True
+        populate_by_name = True  # Allow both field name and alias

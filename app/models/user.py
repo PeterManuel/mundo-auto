@@ -42,6 +42,10 @@ class User(Base):
     google_id = Column(String, nullable=True)
     facebook_id = Column(String, nullable=True)
     
+    # Password reset fields
+    reset_password_token = Column(String, nullable=True)
+    reset_password_expires = Column(DateTime, nullable=True)
+    
     # Relationships
     shop = relationship("Shop", back_populates="users")
     orders = relationship("Order", back_populates="user")

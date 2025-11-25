@@ -226,3 +226,215 @@ def update_shipping_info(
     db.refresh(order)
     
     return order
+
+
+def get_shop_orders(
+    db: Session,
+    shop_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[OrderStatus] = None,
+    user_id: Optional[uuid.UUID] = None
+) -> List[Order]:
+    """
+    Get all orders that contain products from a specific shop
+    """
+    from app.models.shop_product import ShopProduct
+    
+    query = (
+        db.query(Order)
+        .join(OrderItem)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+    )
+    
+    if status:
+        query = query.filter(Order.status == status)
+    
+    if user_id:
+        query = query.filter(Order.user_id == user_id)
+    
+    return query.distinct().order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+
+
+def get_shop_order_history_by_customer(
+    db: Session,
+    shop_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> List[Order]:
+    """
+    Get order history for a specific customer for a specific shop
+    """
+    from app.models.shop_product import ShopProduct
+    
+    return (
+        db.query(Order)
+        .join(OrderItem)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+        .filter(Order.user_id == customer_id)
+        .distinct()
+        .order_by(Order.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_shop_orders(
+    db: Session,
+    shop_id: uuid.UUID,
+    status: Optional[OrderStatus] = None,
+    user_id: Optional[uuid.UUID] = None
+) -> int:
+    """
+    Count orders for a specific shop
+    """
+    from app.models.shop_product import ShopProduct
+    
+    query = (
+        db.query(Order)
+        .join(OrderItem)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+    )
+    
+    if status:
+        query = query.filter(Order.status == status)
+    
+    if user_id:
+        query = query.filter(Order.user_id == user_id)
+    
+    return query.distinct().count()
+
+
+def get_orders_by_shop_and_status(
+    db: Session,
+    shop_id: uuid.UUID,
+    status_list: List[OrderStatus],
+    skip: int = 0,
+    limit: int = 100
+) -> List[Order]:
+    """
+    Get orders by shop and multiple status
+    """
+    from app.models.shop_product import ShopProduct
+    
+    return (
+        db.query(Order)
+        .join(OrderItem)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+        .filter(Order.status.in_(status_list))
+        .distinct()
+        .order_by(Order.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def get_shop_customers_with_orders(
+    db: Session,
+    shop_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> List[Dict]:
+    """
+    Get all customers who have made orders from a specific shop
+    """
+    from sqlalchemy import func
+    from app.models.user import User
+    from app.models.shop_product import ShopProduct
+    
+    result = (
+        db.query(
+            User.id,
+            User.first_name,
+            User.last_name,
+            User.email,
+            func.count(Order.id).label('total_orders'),
+            func.sum(Order.total_amount).label('total_spent'),
+            func.max(Order.created_at).label('last_order_date')
+        )
+        .join(Order, User.id == Order.user_id)
+        .join(OrderItem, Order.id == OrderItem.order_id)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+        .filter(Order.status != OrderStatus.CANCELLED)
+        .group_by(User.id, User.first_name, User.last_name, User.email)
+        .order_by(func.max(Order.created_at).desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    
+    return [
+        {
+            'customer_id': row.id,
+            'customer_name': f"{row.first_name or ''} {row.last_name or ''}".strip() or row.email,
+            'customer_email': row.email,
+            'total_orders': row.total_orders,
+            'total_spent': float(row.total_spent or 0),
+            'last_order_date': row.last_order_date
+        }
+        for row in result
+    ]
+
+
+def get_shop_order_analytics(
+    db: Session,
+    shop_id: uuid.UUID,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> Dict:
+    """
+    Get analytics data for shop orders
+    """
+    from app.models.shop_product import ShopProduct
+    
+    query = (
+        db.query(Order)
+        .join(OrderItem)
+        .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        .filter(ShopProduct.shop_id == shop_id)
+    )
+    
+    if start_date:
+        query = query.filter(Order.created_at >= start_date)
+    if end_date:
+        query = query.filter(Order.created_at <= end_date)
+    
+    # Get orders by status
+    orders_by_status = {}
+    for status in OrderStatus:
+        count = query.filter(Order.status == status).count()
+        orders_by_status[status.value] = count
+    
+    # Get revenue data (only from delivered orders)
+    delivered_orders = query.filter(Order.status == OrderStatus.DELIVERED).all()
+    total_revenue = sum([order.total_amount for order in delivered_orders])
+    
+    # Get average order value
+    avg_order_value = total_revenue / len(delivered_orders) if delivered_orders else 0
+    
+    # Get orders per day (last 30 days)
+    from datetime import timedelta
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    recent_orders = query.filter(Order.created_at >= thirty_days_ago).all()
+    
+    # Group by date
+    orders_per_day = {}
+    for order in recent_orders:
+        date_key = order.created_at.strftime('%Y-%m-%d')
+        orders_per_day[date_key] = orders_per_day.get(date_key, 0) + 1
+    
+    return {
+        'orders_by_status': orders_by_status,
+        'total_revenue': total_revenue,
+        'average_order_value': avg_order_value,
+        'total_delivered_orders': len(delivered_orders),
+        'orders_per_day': orders_per_day
+    }

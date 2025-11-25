@@ -336,3 +336,60 @@ def bulk_activate_deactivate_users(
     
     db.commit()
     return results
+
+
+def create_password_reset_token(db: Session, user_id: uuid.UUID, token: str, expires_at: datetime) -> bool:
+    """
+    Create or update password reset token for a user
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return False
+    
+    user.reset_password_token = token
+    user.reset_password_expires = expires_at
+    db.commit()
+    return True
+
+
+def get_user_by_reset_token(db: Session, token: str) -> Optional[User]:
+    """
+    Get user by password reset token if token is valid and not expired
+    """
+    user = db.query(User).filter(
+        and_(
+            User.reset_password_token == token,
+            User.reset_password_expires > datetime.utcnow()
+        )
+    ).first()
+    return user
+
+
+def reset_user_password(db: Session, user_id: uuid.UUID, new_password: str) -> bool:
+    """
+    Reset user password and clear reset token
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return False
+    
+    user.hashed_password = get_password_hash(new_password)
+    user.reset_password_token = None
+    user.reset_password_expires = None
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
+def clear_password_reset_token(db: Session, user_id: uuid.UUID) -> bool:
+    """
+    Clear password reset token for a user
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return False
+    
+    user.reset_password_token = None
+    user.reset_password_expires = None
+    db.commit()
+    return True

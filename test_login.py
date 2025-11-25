@@ -16,7 +16,7 @@ def test_login():
     """
     print("Testing login functionality...")
     
-    base_url = "https://mundo-auto-1.onrender.com"
+    base_url = "http://localhost:8000"
     login_url = f"{base_url}/api/v1/auth/login"
     
     # Test admin login

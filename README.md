@@ -128,12 +128,12 @@ POSTGRES_DB=mundo_auto
 POSTGRES_PORT=5432
 
 # CORS settings
-BACKEND_CORS_ORIGINS=["http://localhost:3000", "https://mundo-auto-1.onrender.com"]
+BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"]
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=https://mundo-auto-1.onrender.com/api/v1/auth/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
 
 # Uploads directory
 UPLOAD_DIRECTORY=uploads
@@ -159,7 +159,7 @@ poetry run alembic upgrade head
 poetry run uvicorn app.main:app --reload
 ```
 
-The API will be available at https://mundo-auto-1.onrender.com
+The API will be available at http://localhost:8000
 
 ### Step 7: Login with Demo Users
 
