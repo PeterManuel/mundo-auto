@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URI(self) -> str:
-        return "postgresql://postgres:PdRCS!2024#@localhost:5432/mundo_auto"
+        return "postgresql://mundoaut_marques:Admin_2025@65.21.108.120:5432/mundoaut_mundo_auto"
 
 
 settings = Settings()

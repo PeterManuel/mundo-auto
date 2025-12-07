@@ -1,7 +1,7 @@
 """Make shop_products autonomous from products
 
 Revision ID: make_shop_products_autonomous
-Revises: <previous_revision_id>
+Revises: 12ac09e2c526
 Create Date: 2024-11-13 12:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'make_shop_products_autonomous'
-down_revision = '<previous_revision_id>'  # Replace with your actual previous revision
+down_revision = '12ac09e2c526'
 branch_labels = None
 depends_on = None
 

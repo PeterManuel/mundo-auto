@@ -1,7 +1,7 @@
 """modify product images
 
 Revision ID: modify_product_images
-Revises: # you'll need to put the ID of your last migration here
+Revises: 12ac09e2c526
 Create Date: 2025-11-06
 
 """

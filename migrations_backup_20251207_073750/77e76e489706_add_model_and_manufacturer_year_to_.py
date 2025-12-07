@@ -1,7 +1,7 @@
 """add_model_and_manufacturer_year_to_products_v2
 
 Revision ID: 77e76e489706
-Revises: afdc25bda689
+Revises: fa2909e8c3ff
 Create Date: 2025-10-25 13:18:57.611707
 
 """
