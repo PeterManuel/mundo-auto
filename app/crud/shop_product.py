@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from app.models.shop_product import ShopProduct
 from app.models.product import Category
 from app.models.shop import Shop
+from app.models.vehicle import Vehicle
+from app.models.shop_product_image import ShopProductImage
 from app.schemas.shop_product import ShopProductCreate, ShopProductUpdate
 
 
@@ -120,6 +122,10 @@ def create_shop_product(
     """
     Create a new shop product
     """
+    # Validate that at least one vehicle is provided
+    if not shop_product.vehicle_ids:
+        raise ValueError("Shop product must have at least one vehicle")
+        
     # Generate slug if not provided
     if not shop_product.slug:
         base_slug = slugify(shop_product.name)
@@ -132,7 +138,7 @@ def create_shop_product(
         shop_product.slug = slug
     
     # Prepare shop product data
-    product_data = shop_product.dict(exclude={"category_ids", "slug"})
+    product_data = shop_product.dict(exclude={"category_ids", "vehicle_ids", "images", "slug"})
     db_shop_product = ShopProduct(slug=shop_product.slug, **product_data)
     
     # Add categories
@@ -140,7 +146,26 @@ def create_shop_product(
         categories = db.query(Category).filter(Category.id.in_(shop_product.category_ids)).all()
         db_shop_product.categories = categories
     
+    # Add vehicles
+    vehicles = db.query(Vehicle).filter(Vehicle.id.in_(shop_product.vehicle_ids)).all()
+    db_shop_product.vehicles = vehicles
+    
     db.add(db_shop_product)
+    db.commit()
+    db.refresh(db_shop_product)
+    
+    # Add images
+    if shop_product.images:
+        for i, image_data in enumerate(shop_product.images):
+            db_image = ShopProductImage(
+                shop_product_id=db_shop_product.id,
+                image_data=image_data.get("image_data"),
+                alt_text=image_data.get("alt_text"),
+                is_primary=image_data.get("is_primary", i == 0),  # First image is primary by default
+                display_order=image_data.get("display_order", i)
+            )
+            db.add(db_image)
+    
     db.commit()
     db.refresh(db_shop_product)
     return db_shop_product
@@ -156,7 +181,11 @@ def update_shop_product(
     if not db_shop_product:
         return None
     
-    update_data = shop_product.dict(exclude_unset=True, exclude={"category_ids"})
+    # Validate that at least one vehicle remains if vehicles are being updated
+    if shop_product.vehicle_ids is not None and not shop_product.vehicle_ids:
+        raise ValueError("Shop product must have at least one vehicle")
+    
+    update_data = shop_product.dict(exclude_unset=True, exclude={"category_ids", "vehicle_ids", "images"})
     
     # Update slug if name is updated
     if "name" in update_data:
@@ -180,6 +209,29 @@ def update_shop_product(
     if shop_product.category_ids is not None:
         categories = db.query(Category).filter(Category.id.in_(shop_product.category_ids)).all()
         db_shop_product.categories = categories
+    
+    # Update vehicles if provided
+    if shop_product.vehicle_ids is not None:
+        vehicles = db.query(Vehicle).filter(Vehicle.id.in_(shop_product.vehicle_ids)).all()
+        db_shop_product.vehicles = vehicles
+    
+    # Update images if provided
+    if shop_product.images is not None:
+        # Remove existing images
+        db.query(ShopProductImage).filter(
+            ShopProductImage.shop_product_id == shop_product_id
+        ).delete()
+        
+        # Add new images
+        for i, image_data in enumerate(shop_product.images):
+            db_image = ShopProductImage(
+                shop_product_id=shop_product_id,
+                image_data=image_data.get("image_data"),
+                alt_text=image_data.get("alt_text"),
+                is_primary=image_data.get("is_primary", i == 0),  # First image is primary by default
+                display_order=image_data.get("display_order", i)
+            )
+            db.add(db_image)
     
     db.add(db_shop_product)
     db.commit()

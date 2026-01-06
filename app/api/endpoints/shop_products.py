@@ -141,7 +141,6 @@ def read_shop_products(
                 compatible_vehicles=sp.compatible_vehicles,
                 weight=sp.weight,
                 dimensions=sp.dimensions,
-                image=sp.image,
                 is_featured=sp.is_featured,
                 is_on_sale=sp.is_on_sale,
                 stock_quantity=sp.stock_quantity,
@@ -158,6 +157,26 @@ def read_shop_products(
                     "is_active": cat.is_active, 
                     "created_at": cat.created_at.isoformat() if cat.created_at else None
                 } for cat in sp.categories],
+                vehicles=[{
+                    "id": str(vehicle.id),
+                    "brand": vehicle.brand,
+                    "models": [{
+                        "id": str(model.id),
+                        "name": model.name,
+                        "description": model.description
+                    } for model in vehicle.models],
+                    "manufacturer_year": vehicle.manufacturer_year,
+                    "description": vehicle.description
+                } for vehicle in sp.vehicles],
+                images=[{
+                    "id": str(image.id),
+                    "shop_product_id": str(image.shop_product_id),
+                    "image_data": image.image_data,
+                    "alt_text": image.alt_text,
+                    "is_primary": image.is_primary,
+                    "display_order": image.display_order,
+                    "created_at": image.created_at.isoformat()
+                } for image in sp.images],
                 shop_name=shop.name
             )
         )
@@ -198,7 +217,6 @@ def read_shop_product(
         compatible_vehicles=shop_product.compatible_vehicles,
         weight=shop_product.weight,
         dimensions=shop_product.dimensions,
-        image=shop_product.image,
         is_featured=shop_product.is_featured,
         is_on_sale=shop_product.is_on_sale,
         stock_quantity=shop_product.stock_quantity,
@@ -215,6 +233,26 @@ def read_shop_product(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in shop_product.categories],
+        vehicles=[{
+            "id": str(vehicle.id),
+            "brand": vehicle.brand,
+            "models": [{
+                "id": str(model.id),
+                "name": model.name,
+                "description": model.description
+            } for model in vehicle.models],
+            "manufacturer_year": vehicle.manufacturer_year,
+            "description": vehicle.description
+        } for vehicle in shop_product.vehicles],
+        images=[{
+            "id": str(image.id),
+            "shop_product_id": str(image.shop_product_id),
+            "image_data": image.image_data,
+            "alt_text": image.alt_text,
+            "is_primary": image.is_primary,
+            "display_order": image.display_order,
+            "created_at": image.created_at.isoformat()
+        } for image in shop_product.images],
         shop_name=shop.name
     )
     
@@ -264,7 +302,6 @@ def create_shop_product_endpoint(
         compatible_vehicles=db_shop_product.compatible_vehicles,
         weight=db_shop_product.weight,
         dimensions=db_shop_product.dimensions,
-        image=db_shop_product.image,
         is_featured=db_shop_product.is_featured,
         is_on_sale=db_shop_product.is_on_sale,
         stock_quantity=db_shop_product.stock_quantity,
@@ -281,6 +318,26 @@ def create_shop_product_endpoint(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in db_shop_product.categories],
+        vehicles=[{
+            "id": str(vehicle.id),
+            "brand": vehicle.brand,
+            "models": [{
+                "id": str(model.id),
+                "name": model.name,
+                "description": model.description
+            } for model in vehicle.models],
+            "manufacturer_year": vehicle.manufacturer_year,
+            "description": vehicle.description
+        } for vehicle in db_shop_product.vehicles],
+        images=[{
+            "id": str(image.id),
+            "shop_product_id": str(image.shop_product_id),
+            "image_data": image.image_data,
+            "alt_text": image.alt_text,
+            "is_primary": image.is_primary,
+            "display_order": image.display_order,
+            "created_at": image.created_at.isoformat()
+        } for image in db_shop_product.images],
         shop_name=shop.name
     )
     
@@ -335,7 +392,6 @@ def update_shop_product_endpoint(
         compatible_vehicles=updated_shop_product.compatible_vehicles,
         weight=updated_shop_product.weight,
         dimensions=updated_shop_product.dimensions,
-        image=updated_shop_product.image,
         is_featured=updated_shop_product.is_featured,
         is_on_sale=updated_shop_product.is_on_sale,
         stock_quantity=updated_shop_product.stock_quantity,
@@ -352,6 +408,26 @@ def update_shop_product_endpoint(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in updated_shop_product.categories],
+        vehicles=[{
+            "id": str(vehicle.id),
+            "brand": vehicle.brand,
+            "models": [{
+                "id": str(model.id),
+                "name": model.name,
+                "description": model.description
+            } for model in vehicle.models],
+            "manufacturer_year": vehicle.manufacturer_year,
+            "description": vehicle.description
+        } for vehicle in updated_shop_product.vehicles],
+        images=[{
+            "id": str(image.id),
+            "shop_product_id": str(image.shop_product_id),
+            "image_data": image.image_data,
+            "alt_text": image.alt_text,
+            "is_primary": image.is_primary,
+            "display_order": image.display_order,
+            "created_at": image.created_at.isoformat()
+        } for image in updated_shop_product.images],
         shop_name=shop.name
     )
     

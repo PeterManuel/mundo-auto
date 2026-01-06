@@ -4,6 +4,8 @@ import uuid
 
 from pydantic import BaseModel, Field
 
+from app.schemas.vehicle import ShopProductImageResponse
+
 
 # ShopProduct schemas
 class ShopProductBase(BaseModel):
@@ -22,7 +24,7 @@ class ShopProductBase(BaseModel):
     compatible_vehicles: Optional[List[str]] = None
     weight: Optional[float] = None
     dimensions: Optional[str] = None
-    image: Optional[str] = None  # Base64 encoded image
+    # Removed image field - now handled by ShopProductImage model
     is_featured: bool = False
     is_on_sale: bool = False
     stock_quantity: int = 0
@@ -31,6 +33,8 @@ class ShopProductBase(BaseModel):
 class ShopProductCreate(ShopProductBase):
     slug: Optional[str] = None
     category_ids: List[uuid.UUID] = []
+    vehicle_ids: List[uuid.UUID] = []  # Required: at least one vehicle
+    images: List[Dict[str, Any]] = []  # List of image data
 
 
 class ShopProductUpdate(BaseModel):
@@ -48,12 +52,14 @@ class ShopProductUpdate(BaseModel):
     compatible_vehicles: Optional[List[str]] = None
     weight: Optional[float] = None
     dimensions: Optional[str] = None
-    image: Optional[str] = None
+    # Removed image field - now handled by ShopProductImage model
     is_featured: Optional[bool] = None
     is_on_sale: Optional[bool] = None
     stock_quantity: Optional[int] = None
     is_active: Optional[bool] = None
     category_ids: Optional[List[uuid.UUID]] = None
+    vehicle_ids: Optional[List[uuid.UUID]] = None
+    images: Optional[List[Dict[str, Any]]] = None  # List of image data
 
 
 class ShopProductResponse(ShopProductBase):
@@ -63,6 +69,8 @@ class ShopProductResponse(ShopProductBase):
     created_at: datetime
     updated_at: datetime
     categories: List[Dict[str, Any]] = []
+    vehicles: List[Dict[str, Any]] = []
+    images: List[ShopProductImageResponse] = []
     
     class Config:
         from_attributes = True

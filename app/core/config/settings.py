@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Social Login
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "http://mundoauto.ao:8000/api/v1/auth/google/callback"
     FACEBOOK_CLIENT_ID: Optional[str] = None
     FACEBOOK_CLIENT_SECRET: Optional[str] = None
 
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     UPLOAD_DIRECTORY: str = "uploads"
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://mundoauto.ao:8000"]
     
     # Emails
     EMAILS_ENABLED: bool = False

@@ -15,6 +15,14 @@ shop_product_category = Table(
     Column("category_id", UUID(as_uuid=True), ForeignKey("categories.id"), primary_key=True),
 )
 
+# Vehicle-ShopProduct many-to-many relationship
+vehicle_shop_product = Table(
+    "vehicle_shop_product",
+    Base.metadata,
+    Column("vehicle_id", UUID(as_uuid=True), ForeignKey("vehicles.id"), primary_key=True),
+    Column("shop_product_id", UUID(as_uuid=True), ForeignKey("shop_products.id"), primary_key=True),
+)
+
 
 class ShopProduct(Base):
     """
@@ -41,7 +49,7 @@ class ShopProduct(Base):
     compatible_vehicles = Column(ARRAY(String), nullable=True)  # Array of vehicle compatibility
     weight = Column(Float, nullable=True)  # Weight in kg
     dimensions = Column(String, nullable=True)  # Format: "LxWxH" in cm
-    image = Column(Text, nullable=True)  # Base64 encoded image
+    # Removed image field - now handled by ShopProductImage model
     is_featured = Column(Boolean, default=False)
     is_on_sale = Column(Boolean, default=False)
     
@@ -55,6 +63,8 @@ class ShopProduct(Base):
     # Relationships
     shop = relationship("Shop", back_populates="shop_products")
     categories = relationship("Category", secondary=shop_product_category, back_populates="shop_products")
+    vehicles = relationship("Vehicle", secondary=vehicle_shop_product, back_populates="shop_products")
+    images = relationship("ShopProductImage", back_populates="shop_product", cascade="all, delete-orphan")
     order_items = relationship("OrderItem", back_populates="shop_product")
     
     def __repr__(self):

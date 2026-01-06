@@ -6,4 +6,7 @@ from .order import *
 from .product import *
 from .shop import *
 from .shop_product import *
+from .shop_product_image import *
 from .user import *
+from .vehicle import *
+from .vehicle_model import *
