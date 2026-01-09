@@ -18,6 +18,14 @@ def get_shop_product(db: Session, shop_product_id: uuid.UUID) -> Optional[ShopPr
     return db.query(ShopProduct).filter(ShopProduct.id == shop_product_id).first()
 
 
+def get_shop_product_by_slug(db: Session, slug: str) -> Optional[ShopProduct]:
+    """Get shop product by slug only (across all shops)"""
+    return db.query(ShopProduct).filter(
+        ShopProduct.slug == slug,
+        ShopProduct.is_active == True
+    ).first()
+
+
 def get_shop_product_by_shop_and_slug(
     db: Session, shop_id: uuid.UUID, slug: str
 ) -> Optional[ShopProduct]:

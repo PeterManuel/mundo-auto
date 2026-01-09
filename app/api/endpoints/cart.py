@@ -56,7 +56,7 @@ def add_item_to_cart(
         product_name=shop_product.name,
         product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price,
         total_price=cart_item.total_price,
-        product_image=shop_product.image,
+        product_image=shop_product.images[0].image_data if shop_product.images else None,
         shop_name=shop.name
     )
     return response
@@ -89,7 +89,7 @@ def update_item_in_cart(
         product_name=shop_product.name,
         product_price=shop_product.sale_price if shop_product.sale_price else shop_product.price,
         total_price=cart_item.total_price,
-        product_image=shop_product.image,
+        product_image=shop_product.images[0].image_data if shop_product.images else None,
         shop_name=shop.name
     )
     return response

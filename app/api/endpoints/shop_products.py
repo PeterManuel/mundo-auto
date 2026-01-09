@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.endpoints.auth import get_current_user
 from app.crud.shop_product import (
     get_shop_product,
+    get_shop_product_by_slug,
     get_shop_products,
     create_shop_product,
     update_shop_product,
@@ -182,6 +183,81 @@ def read_shop_products(
         )
     
     return result
+
+
+@router.get("/by-slug/{slug}", response_model=ShopProductFullResponse)
+def read_shop_product_by_slug(
+    slug: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a shop product by slug
+    """
+    shop_product = get_shop_product_by_slug(db, slug)
+    if not shop_product:
+        raise HTTPException(status_code=404, detail="Shop product not found")
+    
+    shop = shop_product.shop
+    
+    # Prepare full response
+    response = ShopProductFullResponse(
+        id=shop_product.id,
+        shop_id=shop_product.shop_id,
+        name=shop_product.name,
+        slug=shop_product.slug,
+        description=shop_product.description,
+        technical_details=shop_product.technical_details,
+        price=shop_product.price,
+        sale_price=shop_product.sale_price,
+        sku=shop_product.sku,
+        oe_number=shop_product.oe_number,
+        brand=shop_product.brand,
+        manufacturer=shop_product.manufacturer,
+        model=shop_product.model,
+        manufacturer_year=shop_product.manufacturer_year,
+        compatible_vehicles=shop_product.compatible_vehicles,
+        weight=shop_product.weight,
+        dimensions=shop_product.dimensions,
+        is_featured=shop_product.is_featured,
+        is_on_sale=shop_product.is_on_sale,
+        stock_quantity=shop_product.stock_quantity,
+        is_active=shop_product.is_active,
+        created_at=shop_product.created_at,
+        updated_at=shop_product.updated_at,
+        categories=[{
+            "id": str(cat.id), 
+            "name": cat.name, 
+            "slug": cat.slug, 
+            "description": cat.description, 
+            "parent_id": str(cat.parent_id) if cat.parent_id else None, 
+            "image": cat.image, 
+            "is_active": cat.is_active, 
+            "created_at": cat.created_at.isoformat() if cat.created_at else None
+        } for cat in shop_product.categories],
+        vehicles=[{
+            "id": str(vehicle.id),
+            "brand": vehicle.brand,
+            "models": [{
+                "id": str(model.id),
+                "name": model.name,
+                "description": model.description
+            } for model in vehicle.models],
+            "manufacturer_year": vehicle.manufacturer_year,
+            "description": vehicle.description,
+            "is_active": vehicle.is_active
+        } for vehicle in shop_product.vehicles],
+        images=[{
+            "id": str(image.id),
+            "image_data": image.image_data,
+            "alt_text": image.alt_text,
+            "is_primary": image.is_primary,
+            "display_order": image.display_order,
+            "created_at": image.created_at.isoformat() if image.created_at else None
+        } for image in shop_product.images],
+        shop_name=shop.name
+    )
+    
+    return response
 
 
 @router.get("/{shop_product_id}", response_model=ShopProductFullResponse)

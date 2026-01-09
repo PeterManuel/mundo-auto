@@ -24,80 +24,109 @@ def create_order_from_cart(
     billing_address: str,
     payment_method: str,
     notes: Optional[str] = None
-) -> Order:
+) -> List[Order]:
+    """
+    Create orders from cart, grouping items by shop.
+    Each shop will have its own separate order.
+    Returns a list of created orders.
+    """
     # Get cart items
     cart_items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
     
     if not cart_items:
         raise ValueError("Cart is empty")
     
-    # Calculate total amount
-    total_amount = 0
+    # Group cart items by shop
+    items_by_shop: Dict[uuid.UUID, List[CartItem]] = {}
     for item in cart_items:
         shop_product = item.shop_product
         if shop_product:
-            # Use shop product price (sale_price has priority over regular price)
-            price = shop_product.sale_price if shop_product.sale_price else shop_product.price
-            total_amount += price * item.quantity
+            shop_id = shop_product.shop_id
+            if shop_id not in items_by_shop:
+                items_by_shop[shop_id] = []
+            items_by_shop[shop_id].append(item)
     
-    # Create order
-    new_order = Order(
-        user_id=user_id,
-        order_number=generate_order_number(),
-        total_amount=total_amount,
-        shipping_address=shipping_address,
-        billing_address=billing_address,
-        payment_method=payment_method,
-        notes=notes
-    )
+    created_orders: List[Order] = []
     
-    db.add(new_order)
-    db.flush()  # Get ID without committing
-    
-    # Create order items from cart
-    order_items = []
-    for cart_item in cart_items:
-        shop_product = cart_item.shop_product
+    # Create separate order for each shop
+    for shop_id, shop_cart_items in items_by_shop.items():
+        # Calculate total amount for this shop's order
+        total_amount = 0
+        for item in shop_cart_items:
+            shop_product = item.shop_product
+            if shop_product:
+                price = shop_product.sale_price if shop_product.sale_price else shop_product.price
+                total_amount += price * item.quantity
         
-        if shop_product:
-            # Use shop product price (sale_price has priority over regular price)
-            price = shop_product.sale_price if shop_product.sale_price else shop_product.price
+        # Get shop name for notes
+        shop_name = shop_cart_items[0].shop_product.shop.name if shop_cart_items else "Unknown Shop"
+        
+        # Create order for this shop
+        order_notes = f"Order from {shop_name}"
+        if notes:
+            order_notes = f"{order_notes}. Customer notes: {notes}"
+        
+        new_order = Order(
+            user_id=user_id,
+            order_number=generate_order_number(),
+            total_amount=total_amount,
+            shipping_address=shipping_address,
+            billing_address=billing_address,
+            payment_method=payment_method,
+            notes=order_notes
+        )
+        
+        db.add(new_order)
+        db.flush()  # Get ID without committing
+        
+        # Create order items for this shop
+        order_items = []
+        for cart_item in shop_cart_items:
+            shop_product = cart_item.shop_product
             
-            order_item = OrderItem(
-                order_id=new_order.id,
-                shop_product_id=shop_product.id,
-                quantity=cart_item.quantity,
-                price=price,
-                product_name=shop_product.name,
-                shop_name=shop_product.shop.name
-            )
-            
-            # Update shop inventory
-            shop_product.stock_quantity = max(0, shop_product.stock_quantity - cart_item.quantity)
-            db.add(shop_product)
-            
-            order_items.append(order_item)
+            if shop_product:
+                price = shop_product.sale_price if shop_product.sale_price else shop_product.price
+                
+                order_item = OrderItem(
+                    order_id=new_order.id,
+                    shop_product_id=shop_product.id,
+                    quantity=cart_item.quantity,
+                    price=price,
+                    product_name=shop_product.name,
+                    shop_name=shop_product.shop.name
+                )
+                
+                # Update shop inventory
+                shop_product.stock_quantity = max(0, shop_product.stock_quantity - cart_item.quantity)
+                db.add(shop_product)
+                
+                order_items.append(order_item)
+        
+        # Add order items
+        db.add_all(order_items)
+        
+        # Add initial status update
+        status_update = OrderStatusUpdate(
+            order_id=new_order.id,
+            status=OrderStatus.PENDING,
+            comment=f"Order created for shop: {shop_name}"
+        )
+        db.add(status_update)
+        
+        created_orders.append(new_order)
     
-    # Add order items
-    db.add_all(order_items)
-    
-    # Add initial status update
-    status_update = OrderStatusUpdate(
-        order_id=new_order.id,
-        status=OrderStatus.PENDING,
-        comment="Order created"
-    )
-    db.add(status_update)
-    
-    # Clear cart
+    # Clear cart (all items)
     for item in cart_items:
         db.delete(item)
     
     # Commit transaction
     db.commit()
-    db.refresh(new_order)
     
-    return new_order
+    # Refresh all orders
+    for order in created_orders:
+        db.refresh(order)
+    
+    return created_orders
 
 
 def get_order(db: Session, order_id: uuid.UUID, user_id: Optional[uuid.UUID] = None) -> Optional[Order]:

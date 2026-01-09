@@ -69,6 +69,16 @@ class OrderResponse(OrderBase):
         from_attributes = True
 
 
+class OrdersCreatedResponse(BaseModel):
+    """Response for orders created from cart (multiple orders per shop)"""
+    orders: List[OrderResponse]
+    total_orders: int
+    message: str
+    
+    class Config:
+        from_attributes = True
+
+
 class OrderUpdate(BaseModel):
     status: Optional[OrderStatus] = None
     payment_status: Optional[PaymentStatus] = None

@@ -19,23 +19,25 @@ from app.models.user import User
 from app.schemas.order import (
     OrderCreate,
     OrderResponse,
+    OrdersCreatedResponse,
     OrderUpdate
 )
 
 router = APIRouter()
 
 
-@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=OrdersCreatedResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order: OrderCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create a new order from the user's cart
+    Create orders from the user's cart.
+    Items are grouped by shop, creating separate orders for each shop.
     """
     try:
-        db_order = create_order_from_cart(
+        db_orders = create_order_from_cart(
             db,
             current_user.id,
             order.shipping_address,
@@ -43,7 +45,18 @@ def create_order(
             order.payment_method,
             order.notes
         )
-        return db_order
+        
+        total_orders = len(db_orders)
+        if total_orders == 1:
+            message = "Order created successfully"
+        else:
+            message = f"{total_orders} orders created successfully (one per shop)"
+        
+        return OrdersCreatedResponse(
+            orders=db_orders,
+            total_orders=total_orders,
+            message=message
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
