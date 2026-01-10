@@ -256,15 +256,43 @@ def get_all_vehicle_models(db: Session, brand: Optional[str] = None) -> List[str
     return [model[0] for model in query.all()]
 
 
-def get_vehicle_shop_products(db: Session, vehicle_id: uuid.UUID) -> List[ShopProduct]:
+def get_vehicle_models_by_vehicle_id(db: Session, vehicle_id: uuid.UUID) -> List[Dict]:
     """
-    Get all shop products associated with a vehicle
+    Get all models for a specific vehicle
     """
-    vehicle = get_vehicle(db, vehicle_id)
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         return []
     
-    return vehicle.shop_products
+    models_list = [{
+        "id": str(model.id),
+        "name": model.name,
+        "description": model.description,
+        "vehicle_id": str(model.vehicle_id),
+        "is_active": model.is_active,
+        "created_at": model.created_at,
+        "updated_at": model.updated_at
+    } for model in vehicle.models if model.is_active]
+    
+    return models_list
+
+
+def get_vehicle_shop_products(db: Session, vehicle_id: uuid.UUID) -> List[ShopProduct]:
+    """
+    Get all shop products associated with a vehicle (through its models)
+    """
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not vehicle:
+        return []
+    
+    # Get shop products through vehicle models
+    shop_products = []
+    for model in vehicle.models:
+        for sp in model.shop_products:
+            if sp not in shop_products:
+                shop_products.append(sp)
+    
+    return shop_products
 
 
 def get_vehicles_with_shop_products(
@@ -315,39 +343,47 @@ def get_vehicles_with_shop_products(
     result = []
     for vehicle in vehicles:
         shop_products = []
-        for sp in vehicle.shop_products:
-            if sp.is_active:
-                # Filter by category if provided
-                if category_id:
-                    # Check if any of the shop product's categories match the category_id
-                    category_matches = any(
-                        cat.id == category_id
-                        for cat in sp.categories
-                    )
-                    if not category_matches:
-                        continue
+        seen_product_ids = set()  # Track seen product IDs to avoid duplicates
+        
+        # Get shop products through vehicle models
+        for model in vehicle.models:
+            for sp in model.shop_products:
+                if sp.id in seen_product_ids:
+                    continue
+                seen_product_ids.add(sp.id)
                 
-                # Get primary image
-                primary_image = None
-                images_list = []
-                for image in sp.images:
-                    image_data = {
-                        "id": str(image.id),
-                        "image_data": image.image_data,
-                        "alt_text": image.alt_text,
-                        "is_primary": image.is_primary,
-                        "display_order": image.display_order,
-                        "created_at": image.created_at
-                    }
-                    images_list.append(image_data)
-                    if image.is_primary:
-                        primary_image = image.image_data
-                if not primary_image and sp.images:
-                    primary_image = sp.images[0].image_data
-                
-                shop_products.append({
-                    "id": str(sp.id),
-                    "name": sp.name,
+                if sp.is_active:
+                    # Filter by category if provided
+                    if category_id:
+                        # Check if any of the shop product's categories match the category_id
+                        category_matches = any(
+                            cat.id == category_id
+                            for cat in sp.categories
+                        )
+                        if not category_matches:
+                            continue
+                    
+                    # Get primary image
+                    primary_image = None
+                    images_list = []
+                    for image in sp.images:
+                        image_data = {
+                            "id": str(image.id),
+                            "image_data": image.image_data,
+                            "alt_text": image.alt_text,
+                            "is_primary": image.is_primary,
+                            "display_order": image.display_order,
+                            "created_at": image.created_at
+                        }
+                        images_list.append(image_data)
+                        if image.is_primary:
+                            primary_image = image.image_data
+                    if not primary_image and sp.images:
+                        primary_image = sp.images[0].image_data
+                    
+                    shop_products.append({
+                        "id": str(sp.id),
+                        "name": sp.name,
                     "slug": sp.slug,
                     "description": sp.description,
                     "technical_details": sp.technical_details,

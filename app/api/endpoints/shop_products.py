@@ -158,17 +158,17 @@ def read_shop_products(
                     "is_active": cat.is_active, 
                     "created_at": cat.created_at.isoformat() if cat.created_at else None
                 } for cat in sp.categories],
-                vehicles=[{
-                    "id": str(vehicle.id),
-                    "brand": vehicle.brand,
-                    "models": [{
-                        "id": str(model.id),
-                        "name": model.name,
-                        "description": model.description
-                    } for model in vehicle.models],
-                    "manufacturer_year": vehicle.manufacturer_year,
-                    "description": vehicle.description
-                } for vehicle in sp.vehicles],
+                vehicle_models=[{
+                    "id": str(vm.id),
+                    "name": vm.name,
+                    "description": vm.description,
+                    "vehicle": {
+                        "id": str(vm.vehicle.id),
+                        "brand": vm.vehicle.brand,
+                        "manufacturer_year": vm.vehicle.manufacturer_year,
+                        "description": vm.vehicle.description
+                    } if vm.vehicle else None
+                } for vm in sp.vehicle_models],
                 images=[{
                     "id": str(image.id),
                     "shop_product_id": str(image.shop_product_id),
@@ -234,18 +234,18 @@ def read_shop_product_by_slug(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in shop_product.categories],
-        vehicles=[{
-            "id": str(vehicle.id),
-            "brand": vehicle.brand,
-            "models": [{
-                "id": str(model.id),
-                "name": model.name,
-                "description": model.description
-            } for model in vehicle.models],
-            "manufacturer_year": vehicle.manufacturer_year,
-            "description": vehicle.description,
-            "is_active": vehicle.is_active
-        } for vehicle in shop_product.vehicles],
+        vehicle_models=[{
+            "id": str(vm.id),
+            "name": vm.name,
+            "description": vm.description,
+            "vehicle": {
+                "id": str(vm.vehicle.id),
+                "brand": vm.vehicle.brand,
+                "manufacturer_year": vm.vehicle.manufacturer_year,
+                "description": vm.vehicle.description
+            } if vm.vehicle else None,
+            "is_active": vm.is_active if hasattr(vm, 'is_active') else True
+        } for vm in shop_product.vehicle_models],
         images=[{
             "id": str(image.id),
             "image_data": image.image_data,
@@ -309,17 +309,17 @@ def read_shop_product(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in shop_product.categories],
-        vehicles=[{
-            "id": str(vehicle.id),
-            "brand": vehicle.brand,
-            "models": [{
-                "id": str(model.id),
-                "name": model.name,
-                "description": model.description
-            } for model in vehicle.models],
-            "manufacturer_year": vehicle.manufacturer_year,
-            "description": vehicle.description
-        } for vehicle in shop_product.vehicles],
+        vehicle_models=[{
+            "id": str(vm.id),
+            "name": vm.name,
+            "description": vm.description,
+            "vehicle": {
+                "id": str(vm.vehicle.id),
+                "brand": vm.vehicle.brand,
+                "manufacturer_year": vm.vehicle.manufacturer_year,
+                "description": vm.vehicle.description
+            } if vm.vehicle else None
+        } for vm in shop_product.vehicle_models],
         images=[{
             "id": str(image.id),
             "shop_product_id": str(image.shop_product_id),
@@ -394,17 +394,17 @@ def create_shop_product_endpoint(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in db_shop_product.categories],
-        vehicles=[{
-            "id": str(vehicle.id),
-            "brand": vehicle.brand,
-            "models": [{
-                "id": str(model.id),
-                "name": model.name,
-                "description": model.description
-            } for model in vehicle.models],
-            "manufacturer_year": vehicle.manufacturer_year,
-            "description": vehicle.description
-        } for vehicle in db_shop_product.vehicles],
+        vehicle_models=[{
+            "id": str(vm.id),
+            "name": vm.name,
+            "description": vm.description,
+            "vehicle": {
+                "id": str(vm.vehicle.id),
+                "brand": vm.vehicle.brand,
+                "manufacturer_year": vm.vehicle.manufacturer_year,
+                "description": vm.vehicle.description
+            } if vm.vehicle else None
+        } for vm in db_shop_product.vehicle_models],
         images=[{
             "id": str(image.id),
             "shop_product_id": str(image.shop_product_id),
@@ -484,17 +484,17 @@ def update_shop_product_endpoint(
             "is_active": cat.is_active, 
             "created_at": cat.created_at.isoformat() if cat.created_at else None
         } for cat in updated_shop_product.categories],
-        vehicles=[{
-            "id": str(vehicle.id),
-            "brand": vehicle.brand,
-            "models": [{
-                "id": str(model.id),
-                "name": model.name,
-                "description": model.description
-            } for model in vehicle.models],
-            "manufacturer_year": vehicle.manufacturer_year,
-            "description": vehicle.description
-        } for vehicle in updated_shop_product.vehicles],
+        vehicle_models=[{
+            "id": str(vm.id),
+            "name": vm.name,
+            "description": vm.description,
+            "vehicle": {
+                "id": str(vm.vehicle.id),
+                "brand": vm.vehicle.brand,
+                "manufacturer_year": vm.vehicle.manufacturer_year,
+                "description": vm.vehicle.description
+            } if vm.vehicle else None
+        } for vm in updated_shop_product.vehicle_models],
         images=[{
             "id": str(image.id),
             "shop_product_id": str(image.shop_product_id),

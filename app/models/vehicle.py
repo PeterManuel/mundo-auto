@@ -24,7 +24,6 @@ class Vehicle(Base):
     
     # Relationships
     models = relationship("VehicleModel", back_populates="vehicle", cascade="all, delete-orphan")
-    shop_products = relationship("ShopProduct", secondary="vehicle_shop_product", back_populates="vehicles")
     
     def __repr__(self):
         return f"<Vehicle {self.brand} ({self.manufacturer_year})>"

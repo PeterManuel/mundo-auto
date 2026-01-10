@@ -24,6 +24,7 @@ class VehicleModel(Base):
     
     # Relationships
     vehicle = relationship("Vehicle", back_populates="models")
+    shop_products = relationship("ShopProduct", secondary="vehicle_model_shop_product", back_populates="vehicle_models")
     
     def __repr__(self):
         return f"<VehicleModel {self.name} for Vehicle {self.vehicle_id}>"

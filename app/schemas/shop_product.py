@@ -33,7 +33,7 @@ class ShopProductBase(BaseModel):
 class ShopProductCreate(ShopProductBase):
     slug: Optional[str] = None
     category_ids: List[uuid.UUID] = []
-    vehicle_ids: List[uuid.UUID] = []  # Required: at least one vehicle
+    vehicle_model_ids: List[uuid.UUID] = []  # Required: at least one vehicle model
     images: List[Dict[str, Any]] = []  # List of image data
 
 
@@ -58,7 +58,7 @@ class ShopProductUpdate(BaseModel):
     stock_quantity: Optional[int] = None
     is_active: Optional[bool] = None
     category_ids: Optional[List[uuid.UUID]] = None
-    vehicle_ids: Optional[List[uuid.UUID]] = None
+    vehicle_model_ids: Optional[List[uuid.UUID]] = None
     images: Optional[List[Dict[str, Any]]] = None  # List of image data
 
 
@@ -69,7 +69,7 @@ class ShopProductResponse(ShopProductBase):
     created_at: datetime
     updated_at: datetime
     categories: List[Dict[str, Any]] = []
-    vehicles: List[Dict[str, Any]] = []
+    vehicle_models: List[Dict[str, Any]] = []
     images: List[ShopProductImageResponse] = []
     
     class Config:

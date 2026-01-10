@@ -14,7 +14,8 @@ from app.crud.vehicle import (
     get_all_vehicle_brands,
     get_all_vehicle_models,
     get_vehicle_shop_products,
-    get_vehicles_with_shop_products
+    get_vehicles_with_shop_products,
+    get_vehicle_models_by_vehicle_id
 )
 from app.db.session import get_db
 from app.models.user import User, UserRole
@@ -139,6 +140,24 @@ def read_vehicle(
         )
     
     return vehicle
+
+
+@router.get("/{vehicle_id}/models", response_model=List[dict])
+def read_vehicle_models(
+    vehicle_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all models for a specific vehicle
+    """
+    vehicle = get_vehicle(db, vehicle_id)
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found"
+        )
+    
+    return get_vehicle_models_by_vehicle_id(db, vehicle_id)
 
 
 @router.get("/{vehicle_id}/shop-products", response_model=List[dict])
