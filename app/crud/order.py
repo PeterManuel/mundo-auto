@@ -257,6 +257,64 @@ def update_shipping_info(
     return order
 
 
+def get_all_orders(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[OrderStatus] = None,
+    shop_id: Optional[uuid.UUID] = None
+) -> List[Order]:
+    """
+    Get all orders across all shops (for superadmin).
+    Optionally filter by shop_id.
+    """
+    from app.models.shop_product import ShopProduct
+    
+    if shop_id:
+        # Filter by specific shop
+        query = (
+            db.query(Order)
+            .join(OrderItem)
+            .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+            .filter(ShopProduct.shop_id == shop_id)
+        )
+    else:
+        # Get all orders
+        query = db.query(Order)
+    
+    if status:
+        query = query.filter(Order.status == status)
+    
+    return query.distinct().order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+
+
+def count_all_orders(
+    db: Session,
+    status: Optional[OrderStatus] = None,
+    shop_id: Optional[uuid.UUID] = None
+) -> int:
+    """
+    Count all orders across all shops (for superadmin).
+    Optionally filter by shop_id.
+    """
+    from app.models.shop_product import ShopProduct
+    
+    if shop_id:
+        query = (
+            db.query(Order)
+            .join(OrderItem)
+            .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+            .filter(ShopProduct.shop_id == shop_id)
+        )
+    else:
+        query = db.query(Order)
+    
+    if status:
+        query = query.filter(Order.status == status)
+    
+    return query.distinct().count()
+
+
 def get_shop_orders(
     db: Session,
     shop_id: uuid.UUID,

@@ -105,27 +105,53 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     last_month = now - timedelta(days=30)
     
     # Base queries that may be filtered by shop
-    orders_query = db.query(Order)
     shop_products_query = db.query(ShopProduct)
     
-    # If shop_id is provided, filter all queries by that shop
+    # If shop_id is provided, filter queries by that shop
     if shop_id:
-        # Join with OrderItem then ShopProduct to filter by shop_id
-        orders_query = orders_query.join(OrderItem).join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id).filter(ShopProduct.shop_id == shop_id)
         shop_products_query = shop_products_query.filter(ShopProduct.shop_id == shop_id)
-    
-    # Total sales
-    total_sales = orders_query.with_entities(func.sum(Order.total_amount)).scalar() or 0
-    
-    # Total orders
-    total_orders = orders_query.count() or 0
-    
-    # Pending orders
-    pending_orders = (
-        orders_query
-        .filter(Order.status.in_([OrderStatus.PENDING, OrderStatus.PROCESSING]))
-        .count()
-    ) or 0
+        
+        # Get order IDs that contain items from this shop (to avoid counting orders multiple times)
+        shop_order_ids_subquery = (
+            db.query(OrderItem.order_id)
+            .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+            .filter(ShopProduct.shop_id == shop_id)
+            .distinct()
+            .subquery()
+        )
+        
+        # Total sales - sum of order totals for orders containing items from this shop
+        total_sales = (
+            db.query(func.sum(Order.total_amount))
+            .filter(Order.id.in_(db.query(shop_order_ids_subquery.c.order_id)))
+            .scalar()
+        ) or 0
+        
+        # Total orders - count distinct orders containing items from this shop
+        total_orders = (
+            db.query(func.count(Order.id))
+            .filter(Order.id.in_(db.query(shop_order_ids_subquery.c.order_id)))
+            .scalar()
+        ) or 0
+        
+        # Pending orders - count distinct pending/processing orders containing items from this shop
+        pending_orders = (
+            db.query(func.count(Order.id))
+            .filter(
+                Order.id.in_(db.query(shop_order_ids_subquery.c.order_id)),
+                Order.status.in_([OrderStatus.PENDING, OrderStatus.PROCESSING])
+            )
+            .scalar()
+        ) or 0
+    else:
+        # Global stats - no shop filtering needed
+        total_sales = db.query(func.sum(Order.total_amount)).scalar() or 0
+        total_orders = db.query(func.count(Order.id)).scalar() or 0
+        pending_orders = (
+            db.query(func.count(Order.id))
+            .filter(Order.status.in_([OrderStatus.PENDING, OrderStatus.PROCESSING]))
+            .scalar()
+        ) or 0
     
     # Total products (shop products in this shop or all shops)
     if shop_id:
@@ -211,9 +237,18 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
         .join(User, User.id == Order.user_id)
     )
     
-    # Apply shop filter if needed
+    # Apply shop filter if needed using subquery to avoid duplicates
     if shop_id:
-        recent_orders_base_query = recent_orders_base_query.join(OrderItem).join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id).filter(ShopProduct.shop_id == shop_id)
+        shop_order_ids = (
+            db.query(OrderItem.order_id)
+            .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+            .filter(ShopProduct.shop_id == shop_id)
+            .distinct()
+            .subquery()
+        )
+        recent_orders_base_query = recent_orders_base_query.filter(
+            Order.id.in_(db.query(shop_order_ids.c.order_id))
+        )
     
     # Complete the query with ordering and limit
     recent_orders_query = (

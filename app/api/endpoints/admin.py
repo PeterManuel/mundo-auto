@@ -370,7 +370,8 @@ def delete_report_endpoint(
 # Order management
 @router.get("/orders", response_model=List[Dict[str, Any]])
 def read_admin_orders(
-    status: Optional[OrderStatus] = None,
+    order_status: Optional[OrderStatus] = None,
+    shop_id: Optional[uuid.UUID] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -378,8 +379,24 @@ def read_admin_orders(
 ):
     """
     Get all orders (admin view)
+    - For superadmins: Can view all orders or filter by shop_id
+    - For logist users: Can only view orders for their assigned shop
     """
-    check_admin_access(current_user)
+    # Handle access control based on user role
+    if current_user.role == UserRole.LOGIST:
+        # Logist users can only see their assigned shop's orders
+        if not current_user.shop_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not assigned to any shop"
+            )
+        # Force the shop_id parameter to be the logist's assigned shop
+        shop_id = current_user.shop_id
+    elif current_user.role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access orders"
+        )
     
     # Query orders with user information
     query = (
@@ -387,8 +404,18 @@ def read_admin_orders(
         .join(User, Order.user_id == User.id)
     )
     
-    if status:
-        query = query.filter(Order.status == status)
+    # Filter by shop_id if provided
+    if shop_id:
+        # Join with order items and shop products to filter by shop
+        from app.models.order import OrderItem
+        from app.models.shop_product import ShopProduct
+        query = query.join(OrderItem, Order.id == OrderItem.order_id)
+        query = query.join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
+        query = query.filter(ShopProduct.shop_id == shop_id)
+        query = query.distinct()
+    
+    if order_status:
+        query = query.filter(Order.status == order_status)
     
     query = query.order_by(Order.created_at.desc()).offset(skip).limit(limit)
     results = query.all()

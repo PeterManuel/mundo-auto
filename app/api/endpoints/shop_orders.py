@@ -16,7 +16,9 @@ from app.crud.order import (
     get_order,
     get_orders_by_shop_and_status,
     get_shop_customers_with_orders,
-    get_shop_order_analytics
+    get_shop_order_analytics,
+    get_all_orders,
+    count_all_orders
 )
 from app.crud.user import get_user
 from app.crud.shop import get_shop
@@ -33,6 +35,88 @@ from app.schemas.order import (
 )
 
 router = APIRouter()
+
+
+@router.get("/orders/all", response_model=List[OrderResponse])
+def get_all_shops_orders(
+    shop_id: Optional[uuid.UUID] = Query(None, description="Filter by shop ID"),
+    order_status: Optional[OrderStatus] = Query(None, description="Filter by order status"),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all orders across all shops (superadmin only).
+    Optionally filter by shop_id.
+    """
+    # Only superadmin can access this endpoint
+    if current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superadmin can access all orders"
+        )
+    
+    # If shop_id is provided, verify shop exists
+    if shop_id:
+        shop = get_shop(db, shop_id)
+        if not shop:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Shop not found"
+            )
+    
+    orders = get_all_orders(db, skip, limit, order_status, shop_id)
+    return orders
+
+
+@router.get("/orders/all/summary", response_model=ShopOrderSummary)
+def get_all_shops_orders_summary(
+    shop_id: Optional[uuid.UUID] = Query(None, description="Filter by shop ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get order summary across all shops (superadmin only).
+    Optionally filter by shop_id.
+    """
+    # Only superadmin can access this endpoint
+    if current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superadmin can access all orders summary"
+        )
+    
+    # If shop_id is provided, verify shop exists
+    if shop_id:
+        shop = get_shop(db, shop_id)
+        if not shop:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Shop not found"
+            )
+    
+    # Get order counts by status
+    total_orders = count_all_orders(db, shop_id=shop_id)
+    pending_orders = count_all_orders(db, OrderStatus.PENDING, shop_id)
+    processing_orders = count_all_orders(db, OrderStatus.PROCESSING, shop_id)
+    shipped_orders = count_all_orders(db, OrderStatus.SHIPPED, shop_id)
+    delivered_orders = count_all_orders(db, OrderStatus.DELIVERED, shop_id)
+    cancelled_orders = count_all_orders(db, OrderStatus.CANCELLED, shop_id)
+    
+    # Calculate total revenue (from delivered orders only)
+    delivered_order_list = get_all_orders(db, 0, 10000, OrderStatus.DELIVERED, shop_id)
+    total_revenue = sum([order.total_amount for order in delivered_order_list])
+    
+    return ShopOrderSummary(
+        total_orders=total_orders,
+        pending_orders=pending_orders,
+        processing_orders=processing_orders,
+        shipped_orders=shipped_orders,
+        delivered_orders=delivered_orders,
+        cancelled_orders=cancelled_orders,
+        total_revenue=total_revenue
+    )
 
 
 def check_shop_access(current_user: User, shop_id: uuid.UUID) -> bool:
