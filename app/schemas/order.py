@@ -52,6 +52,18 @@ class OrderStatusUpdateResponse(BaseModel):
         from_attributes = True
 
 
+class OrderUserResponse(BaseModel):
+    """User data included in order response"""
+    id: uuid.UUID
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
 class OrderResponse(OrderBase):
     id: uuid.UUID
     order_number: str
@@ -64,6 +76,7 @@ class OrderResponse(OrderBase):
     updated_at: datetime
     items: List[OrderItemResponse] = []
     status_updates: List[OrderStatusUpdateResponse] = []
+    user: Optional[OrderUserResponse] = None
     
     class Config:
         from_attributes = True

@@ -26,6 +26,7 @@ from app.crud.product import (
     delete_product
 )
 from app.crud.order import get_order, update_order_status, update_payment_status, update_shipping_info
+from app.crud.invoice import get_invoice_data_admin, get_invoice_data
 from app.db.session import get_db
 from app.models.order import OrderStatus, PaymentStatus
 from app.models.user import User, UserRole
@@ -40,6 +41,7 @@ from app.schemas.admin import (
     ReportResponse,
     DashboardSummary
 )
+from app.schemas.invoice import InvoiceData
 from app.utils.file_upload import save_upload_file
 from app.models.admin import Banner
 
@@ -503,3 +505,48 @@ def update_order_shipping_info_endpoint(
         "shipping_company": order.shipping_company,
         "updated_at": order.updated_at
     }
+
+
+@router.get("/orders/{order_id}/invoice", response_model=InvoiceData)
+def get_order_invoice_admin(
+    order_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get invoice data for a paid order.
+    - Superadmin can access all orders
+    - Logist can only access orders from their assigned shop
+    Returns invoice data if the order is paid.
+    """
+    from app.crud.invoice import get_invoice_data
+    from app.models.order import Order, OrderItem
+    from app.models.shop_product import ShopProduct
+    
+    # Check user role and permissions
+    if current_user.role == UserRole.SUPERADMIN:
+        # Superadmin can access all invoices
+        invoice_data = get_invoice_data_admin(db, order_id)
+    elif current_user.role == UserRole.LOGIST:
+        # Logist can only access invoices for their shop
+        if not current_user.shop_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not assigned to any shop"
+            )
+        
+        # Use the shop-specific invoice function
+        invoice_data = get_invoice_data(db, order_id, current_user.shop_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required"
+        )
+    
+    if not invoice_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice data not found. Order must be paid and belong to your shop."
+        )
+    
+    return invoice_data

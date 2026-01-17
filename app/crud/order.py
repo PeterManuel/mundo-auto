@@ -4,7 +4,7 @@ import uuid
 import random
 import string
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.order import Order, OrderItem, OrderStatus, OrderStatusUpdate, PaymentStatus
 from app.models.cart import CartItem
@@ -274,13 +274,14 @@ def get_all_orders(
         # Filter by specific shop
         query = (
             db.query(Order)
+            .options(joinedload(Order.user))
             .join(OrderItem)
             .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
             .filter(ShopProduct.shop_id == shop_id)
         )
     else:
         # Get all orders
-        query = db.query(Order)
+        query = db.query(Order).options(joinedload(Order.user))
     
     if status:
         query = query.filter(Order.status == status)
@@ -330,6 +331,7 @@ def get_shop_orders(
     
     query = (
         db.query(Order)
+        .options(joinedload(Order.user))
         .join(OrderItem)
         .join(ShopProduct, OrderItem.shop_product_id == ShopProduct.id)
         .filter(ShopProduct.shop_id == shop_id)

@@ -138,3 +138,122 @@ def get_invoice_data(db: Session, order_id: uuid.UUID, shop_id: uuid.UUID) -> Op
     )
     
     return invoice_data
+
+
+def get_invoice_data_admin(db: Session, order_id: uuid.UUID) -> Optional[InvoiceData]:
+    """
+    Get invoice data for a paid order (admin version - no shop restriction).
+    This is used by superadmins who can access all orders regardless of shop.
+    
+    Args:
+        db: Database session
+        order_id: Order ID
+        
+    Returns:
+        InvoiceData if order is paid, None otherwise
+    """
+    # Get order with related data
+    order = (
+        db.query(Order)
+        .join(Order.user)
+        .join(Order.items)
+        .filter(Order.id == order_id)
+        .first()
+    )
+    
+    if not order:
+        return None
+    
+    # Check if order is paid
+    if order.payment_status != PaymentStatus.PAID:
+        return None
+    
+    # Get all items from the order
+    all_items = order.items
+    if not all_items:
+        return None
+    
+    # Get the first shop from the order items (for invoice header)
+    first_shop_product = db.query(ShopProduct).filter(
+        ShopProduct.id == all_items[0].shop_product_id
+    ).first()
+    
+    if not first_shop_product:
+        return None
+    
+    shop = db.query(Shop).filter(Shop.id == first_shop_product.shop_id).first()
+    if not shop:
+        return None
+    
+    # Calculate financial details for all items
+    subtotal = sum(item.price * item.quantity for item in all_items)
+    shipping_cost = 0.0
+    tax_rate = 0.0
+    tax_amount = subtotal * tax_rate
+    total_amount = subtotal + shipping_cost + tax_amount
+    
+    # Generate invoice number
+    invoice_number = generate_invoice_number(order.order_number)
+    
+    # Create customer data
+    customer_data = InvoiceCustomerData(
+        customer_id=order.user.id,
+        name=f"{order.user.first_name or ''} {order.user.last_name or ''}".strip() or "N/A",
+        email=order.user.email,
+        phone_number=order.user.phone_number
+    )
+    
+    # Create shop data
+    shop_data = InvoiceShopData(
+        shop_id=shop.id,
+        name=shop.name,
+        address=shop.address,
+        phone=shop.phone,
+        email=shop.email,
+        logo=shop.logo
+    )
+    
+    # Create items data
+    items_data = []
+    for item in all_items:
+        shop_product = db.query(ShopProduct).filter(ShopProduct.id == item.shop_product_id).first()
+        
+        item_data = InvoiceItemData(
+            product_name=item.product_name,
+            quantity=item.quantity,
+            unit_price=item.price,
+            total_price=item.price * item.quantity,
+            shop_name=item.shop_name,
+            sku=shop_product.sku if shop_product else None,
+            oe_number=shop_product.oe_number if shop_product else None,
+            brand=shop_product.brand if shop_product else None
+        )
+        items_data.append(item_data)
+    
+    # Create invoice data
+    invoice_data = InvoiceData(
+        order_id=order.id,
+        order_number=order.order_number,
+        invoice_number=invoice_number,
+        invoice_date=datetime.utcnow(),
+        due_date=None,
+        order_date=order.created_at,
+        order_status=order.status,
+        payment_method=order.payment_method,
+        payment_status=order.payment_status,
+        customer=customer_data,
+        shop=shop_data,
+        billing_address=order.billing_address,
+        shipping_address=order.shipping_address,
+        items=items_data,
+        subtotal=subtotal,
+        shipping_cost=shipping_cost,
+        tax_amount=tax_amount,
+        tax_rate=tax_rate,
+        total_amount=total_amount,
+        notes=order.notes,
+        tracking_number=order.tracking_number,
+        shipping_company=order.shipping_company
+    )
+    
+    return invoice_data

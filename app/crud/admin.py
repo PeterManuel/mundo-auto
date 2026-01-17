@@ -126,6 +126,9 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
             .filter(Order.id.in_(db.query(shop_order_ids_subquery.c.order_id)))
             .scalar()
         ) or 0
+        # Platform amount (5%) and liquid value (95%) for this shop
+        platform_amount = round(total_sales * 0.05, 2)
+        liquid_value = round(total_sales * 0.95, 2)
         
         # Total orders - count distinct orders containing items from this shop
         total_orders = (
@@ -146,6 +149,8 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     else:
         # Global stats - no shop filtering needed
         total_sales = db.query(func.sum(Order.total_amount)).scalar() or 0
+        platform_amount = round(total_sales * 0.05, 2)
+        liquid_value = round(total_sales * 0.95, 2)
         total_orders = db.query(func.count(Order.id)).scalar() or 0
         pending_orders = (
             db.query(func.count(Order.id))
@@ -277,6 +282,8 @@ def get_dashboard_stats(db: Session, shop_id: Optional[uuid.UUID] = None) -> Dic
     
     return {
         "total_sales": total_sales,
+        "platform_amount": platform_amount,
+        "liquid_value": liquid_value,
         "total_orders": total_orders,
         "pending_orders": pending_orders,
         "total_products": total_products,

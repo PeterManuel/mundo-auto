@@ -76,6 +76,8 @@ class ReportResponse(ReportBase):
 
 class DashboardSummary(BaseModel):
     total_sales: float
+    platform_amount: float
+    liquid_value: float
     total_orders: int
     pending_orders: int
     total_products: int
